@@ -2113,7 +2113,9 @@ function goToBookshelf() {
   color: var(--reader-body);
   background: var(--reader-panel-bg);
   padding: 20px;
-  min-height: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
 }
 
@@ -2160,7 +2162,8 @@ function goToBookshelf() {
 }
 
 .reader-catalog__list--drawer {
-  max-height: calc(100dvh - 240px);
+  flex: 1;
+  min-height: 0;
   margin-top: 18px;
 }
 
@@ -2279,6 +2282,9 @@ function goToBookshelf() {
 .reader-settings {
   display: grid;
   gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .reader-settings__group {
@@ -2442,7 +2448,9 @@ function goToBookshelf() {
   top: 0;
   left: 0;
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: var(--reader-panel-bg);
 }
 
