@@ -87,6 +87,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { notify } from "@/utils/notify";
 import { Badge } from "@/components/ui/badge";
 
 import type { BookGroup } from "../types/api";
@@ -153,8 +154,13 @@ function emitRename(groupId: number) {
   cancelEdit();
 }
 
-function confirmDelete(groupId: number, groupName: string) {
-  if (confirm(`删除前会做安全校验，确认删除「${groupName}」吗？`)) {
+async function confirmDelete(groupId: number, groupName: string) {
+  const confirmed = await notify.confirm(`删除前会做安全校验，确认删除「${groupName}」吗？`, {
+    title: "删除分组",
+    confirmLabel: "确认删除",
+    destructive: true,
+  });
+  if (confirmed) {
     emit("delete", groupId);
   }
 }

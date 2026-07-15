@@ -1053,14 +1053,24 @@ async function handleSetDefault(rule: ChapterRule) {
   }
 }
 
-function confirmDeleteTable(rule: ChapterRule) {
-  if (confirm(`删除后无法恢复，确认删除「${rule.rule_name}」吗？`)) {
+async function confirmDeleteTable(rule: ChapterRule) {
+  const confirmed = await notify.confirm(`删除后无法恢复，确认删除「${rule.rule_name}」吗？`, {
+    title: "删除目录规则",
+    confirmLabel: "确认删除",
+    destructive: true,
+  });
+  if (confirmed) {
     void handleDelete(rule);
   }
 }
 
-function confirmDelete(rule: ChapterRule) {
-  if (confirm(`删除后无法恢复，确认删除「${rule.rule_name}」吗？`)) {
+async function confirmDelete(rule: ChapterRule) {
+  const confirmed = await notify.confirm(`删除后无法恢复，确认删除「${rule.rule_name}」吗？`, {
+    title: "删除目录规则",
+    confirmLabel: "确认删除",
+    destructive: true,
+  });
+  if (confirmed) {
     void handleDelete(rule);
   }
 }
@@ -1937,7 +1947,6 @@ onUnmounted(() => {
 }
 
 </style>
-
 
 
 
