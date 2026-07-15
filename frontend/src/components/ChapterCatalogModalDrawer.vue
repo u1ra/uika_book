@@ -197,9 +197,7 @@ function formatChapterOrdinal(index: number) {
   top: 0;
   right: 0;
   height: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  overflow-y: auto;
   background: var(--surface-color);
   padding: 20px;
   box-sizing: border-box;
@@ -308,13 +306,8 @@ function formatChapterOrdinal(index: number) {
   background: rgba(74, 159, 217, 0.7);
 }
 
-.chapter-catalog-panel--drawer {
-  height: 100%;
-  grid-template-rows: auto 1fr;
-}
-
 .chapter-catalog-panel--drawer .chapter-catalog-panel__body {
-  max-height: none;
+  max-height: calc(100vh - 220px);
 }
 
 .chapter-catalog-panel__empty {

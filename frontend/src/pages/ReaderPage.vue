@@ -85,14 +85,7 @@
         </div>
       </aside>
 
-      <main
-        class="reader-stage"
-        @click="handleReadingSurfaceTap"
-        @touchstart.passive="handleReaderTouchStart"
-        @touchmove.passive="handleReaderTouchMove"
-        @touchend="handleReaderTouchEnd"
-        @touchcancel="resetReaderSwipeGesture"
-      >
+      <main class="reader-stage" @click="handleReadingSurfaceTap">
         <section class="reader-stage__hero">
           <span class="reader-eyebrow">Scroll Reading</span>
 
@@ -388,8 +381,6 @@ const MOBILE_CONTENT_WIDTH_MIN_PERCENT = 84;
 const MOBILE_CONTENT_WIDTH_MAX_PERCENT = 100;
 const CATALOG_ITEM_ESTIMATED_HEIGHT = 82;
 const CATALOG_OVERSCAN = 8;
-const READER_SWIPE_TRIGGER_PX = 72;
-const READER_SWIPE_DIRECTION_RATIO = 1.35;
 
 type ProgressSnapshot = ReadingProgressPayload;
 type ReaderDrawerView = "catalog" | "settings";
@@ -458,11 +449,6 @@ const catalogItemRefs = new Map<number, HTMLElement>();
 const catalogScrollTop = ref(0);
 const catalogListHeight = ref(0);
 const catalogJumpIndex = ref(0);
-const readerSwipeStartX = ref<number | null>(null);
-const readerSwipeStartY = ref<number | null>(null);
-const readerSwipeLastX = ref<number | null>(null);
-const readerSwipeLastY = ref<number | null>(null);
-const readerSwipeTracking = ref(false);
 
 let progressSaveTimer: ReturnType<typeof setTimeout> | null = null;
 let saveInFlight = false;
@@ -1096,96 +1082,6 @@ function handleReadingSurfaceTap() {
   }
 
   mobileChromeVisible.value = !mobileChromeVisible.value;
-}
-
-function shouldTrackReaderSwipe(target: EventTarget | null) {
-  if (!isCompactViewport.value || activeDrawer.value) {
-    return false;
-  }
-
-  if (!(target instanceof Element)) {
-    return true;
-  }
-
-  return !target.closest(
-    [
-      ".reader-rail",
-      ".reader-float",
-      ".reader-paper__chapter-nav",
-      "button",
-      "a",
-      "input",
-      "textarea",
-      "select",
-      "label",
-      "[role='button']",
-      "[role='slider']",
-      "[data-radix-collection-item]",
-    ].join(", "),
-  );
-}
-
-function resetReaderSwipeGesture() {
-  readerSwipeStartX.value = null;
-  readerSwipeStartY.value = null;
-  readerSwipeLastX.value = null;
-  readerSwipeLastY.value = null;
-  readerSwipeTracking.value = false;
-}
-
-function handleReaderTouchStart(event: TouchEvent) {
-  if (event.touches.length !== 1 || !shouldTrackReaderSwipe(event.target)) {
-    resetReaderSwipeGesture();
-    return;
-  }
-
-  const touch = event.touches[0];
-  readerSwipeStartX.value = touch.clientX;
-  readerSwipeStartY.value = touch.clientY;
-  readerSwipeLastX.value = touch.clientX;
-  readerSwipeLastY.value = touch.clientY;
-  readerSwipeTracking.value = true;
-}
-
-function handleReaderTouchMove(event: TouchEvent) {
-  if (!readerSwipeTracking.value || event.touches.length !== 1) {
-    return;
-  }
-
-  const touch = event.touches[0];
-  readerSwipeLastX.value = touch.clientX;
-  readerSwipeLastY.value = touch.clientY;
-}
-
-function handleReaderTouchEnd(event: TouchEvent) {
-  if (
-    !readerSwipeTracking.value ||
-    readerSwipeStartX.value === null ||
-    readerSwipeStartY.value === null ||
-    (readerSwipeLastX.value === null && event.changedTouches.length === 0) ||
-    (readerSwipeLastY.value === null && event.changedTouches.length === 0)
-  ) {
-    resetReaderSwipeGesture();
-    return;
-  }
-
-  const endTouch = event.changedTouches[0];
-  const endX = endTouch?.clientX ?? readerSwipeLastX.value ?? readerSwipeStartX.value;
-  const endY = endTouch?.clientY ?? readerSwipeLastY.value ?? readerSwipeStartY.value;
-  const deltaX = endX - readerSwipeStartX.value;
-  const deltaY = endY - readerSwipeStartY.value;
-  const absDeltaX = Math.abs(deltaX);
-  const absDeltaY = Math.abs(deltaY);
-  const isHorizontalSwipe = absDeltaX >= READER_SWIPE_TRIGGER_PX
-    && absDeltaX > absDeltaY * READER_SWIPE_DIRECTION_RATIO;
-
-  resetReaderSwipeGesture();
-
-  if (!isHorizontalSwipe) {
-    return;
-  }
-
-  goToBookshelf();
 }
 
 function toProgressSnapshot(source: Pick<ReadingProgress, "chapter_index" | "char_offset" | "percent" | "updated_at">): ProgressSnapshot {
@@ -2046,8 +1942,6 @@ function goToBookshelf() {
   min-width: 0;
   display: grid;
   gap: 24px;
-  overscroll-behavior-x: none;
-  touch-action: pan-y;
 }
 
 .reader-stage__hero {
@@ -2219,9 +2113,7 @@ function goToBookshelf() {
   color: var(--reader-body);
   background: var(--reader-panel-bg);
   padding: 20px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+  min-height: 100%;
   box-sizing: border-box;
 }
 
@@ -2268,8 +2160,7 @@ function goToBookshelf() {
 }
 
 .reader-catalog__list--drawer {
-  flex: 1;
-  min-height: 0;
+  max-height: calc(100dvh - 240px);
   margin-top: 18px;
 }
 
@@ -2388,9 +2279,6 @@ function goToBookshelf() {
 .reader-settings {
   display: grid;
   gap: 16px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 .reader-settings__group {
@@ -2554,9 +2442,7 @@ function goToBookshelf() {
   top: 0;
   left: 0;
   height: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  overflow-y: auto;
   background: var(--reader-panel-bg);
 }
 
