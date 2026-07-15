@@ -1,473 +1,115 @@
-## v1.09
-
-Date
-`2026-04-24`
-
-Summary
-本次版本聚焦线上使用体验修复与账户安全增强：
-- 修复通过域名 / 反向代理访问时的 CORS 跨域失败问题（登录报错"无法链接到后端"）。
-- 修复夜间模式下弹窗 / 抽屉 / 下拉栏的透明度与硬编码颜色问题。
-- 新增更改密码功能。
-- 优化移动端书架卡片与详情页交互。
-- 全局去掉书架卡片右上角"开始/继续阅读"标签。
-
-Backend
-- 新增原生 ASGI `ReflectCORSMiddleware`：
-  - 拦截 OPTIONS 预检请求，反射请求中的 `Origin` 头，返回完整的 CORS 响应头。
-  - 非 OPTIONS 请求在响应中动态注入 `Access-Control-Allow-Origin` 和 `Access-Control-Allow-Credentials`。
-  - 优先于标准 `CORSMiddleware` 注册（外层包裹），避免标准 CORS 先拦截 OPTIONS 返回 400。
-  - 解决通过 OpenResty + FRP 域名穿透访问时的跨域问题。
-- 新增更改密码接口 `POST /api/auth/change-password`：
-  - 验证旧密码正确后更新为新密码（PBKDF2-SHA256 + salt）。
-  - 旧密码不正确时返回 401。
-
-Frontend
-- 新增更改密码交互：
-  - `AppLayout.vue` 右上角用户名区域改为下拉菜单（▶ 更改密码 / 退出登录）。
-  - 弹窗表单：当前密码 / 新密码 / 确认新密码，带完整前端校验（必填 / 6位 / 一致性）。
-  - 保存中状态 `passwordPending`，成功后自动退出并跳转登录页。
-  - 移动端下拉菜单错位修复：`@media (max-width: 780px)` 给 `.app-layout__user` 加 `width: fit-content; align-self: flex-end;`。
-- 夜间模式 UI Bug 修复：
-  - `ChapterCatalogModalDrawer.vue`：硬编码白色背景 `#fff` / `rgba(255,255,255,0.82)` → CSS 变量适配暗色。
-  - `BookDetailPage.vue`："查看目录"按钮 `ghost` → `outline`；"编辑信息"弹窗简介 `textarea` 背景改为 `var(--surface-input-bg)`。
-- 移动端书架卡片精简（`@media (max-width: 720px)`）：
-  - 隐藏 `.bookshelf-item__badge` 和 `.bookshelf-item__facts`（作者、章节数、字数、收录时间）。
-  - 缩小卡片网格为 `62px + 1fr`，减少 padding 和 gap。
-- 全局去掉书架卡片右上角阅读标签：`.bookshelf-item__badge { display: none; }`（不限于移动端）。
-- 详情页"返回书架"按钮：`variant="ghost"` → `variant="outline" size="sm"`。
-
-Verification
-- Docker 构建验证通过：
-  - `docker compose up -d --build`
-  - 前端 `http://localhost:7234` 正常访问
-  - 后端 `http://localhost:8234/health` 正常访问
-  - 域名穿透场景下登录、书架、阅读、进度同步均正常
-
-## v1.08
-
-Date
-`2026-04-22`
-
-Summary
-本次版本包含两大主题更新：
-1. 日间模式整体配色从粉白单一色调升级为「水色天空蓝 + 樱花粉」的二次元蓝粉配色，并进一步加深饱和度，提升视觉辨识度。
-2. 项目正式支持 PWA（Progressive Web App），应用名称「初华的书」，可安装为安卓 fullscreen 沉浸式全屏应用。
-
-Frontend
-- 日间模式蓝粉配色重构（饱和度加深版）：
-  - 核心变量文件 `index.css` 全面替换：
-    - 背景渐变：`#FFF5F7→#FFF0F3`（粉白）→ `#D6ECFA→#F0DEE8`（天空蓝→樱花粉，加深版）。
-    - 主色（Primary）：`#F4A4B4`（樱花粉）→ `#4A9FD9`（更深更饱和的天空蓝）。
-    - 强调色（Accent）：`#C9B1FF`（薰衣草紫）→ `#F4A4B4`（樱花粉保留）。
-    - 文字色：`#2D2D2D/#5A5A5A` → `#2D3A4A/#5A6A7A`（蓝灰系）。
-    - 按钮主色：`#111827`（近黑）→ `#4A9FD9`（蓝色），hover `#3B8FD4`。
-    - 滑块填充、边框、阴影、标签页、选中文本：全部从粉色系迁移为蓝色系。
-  - 阅读页 `ReaderPage.vue` light 主题同步：背景、面板、纸张、光晕、进度条轨道、滚动条、文字色全部适配蓝粉。
-  - 书架页 `BookshelfPage.vue`：工具栏光晕（左上蓝+右下粉）、标签页 hover/active、卡片 hover 边框、封面渐变、徽章背景、进度条轨道。
-  - 书籍详情页 `BookDetailPage.vue`：hero 光晕、封面渐变（蓝→粉）、eyebrow 背景、modal 封面。
-  - 规则管理页 `RuleManagementPage.vue`：hero 光晕、eyebrow、代码块、radio active、表格 hover。
-  - 登录页 `LoginPage.vue`：intro 光晕。
-  - 组件级异常颜色清理：
-    - `ChapterCatalogModalDrawer.vue`：棕色边框 `rgba(109,90,74,…)` → 蓝色；绿色渐变 `rgba(52,107,97,…)` → 蓝色。
-    - `BookGroupManagerModal.vue` / `BookGroupSelectorModal.vue`：棕色边框 → 蓝色。
-  - Shadcn 组件 hardcoded gray 修复：
-    - `Card.vue`：`border-gray-200` / `text-gray-900` → CSS 变量。
-    - `TabsList.vue`：`bg-gray-100` / `text-gray-500` → CSS 变量。
-    - `TabsTrigger.vue`：`focus-visible:ring-gray-400` / `data-[state=active]:text-gray-900` → CSS 变量。
-    - `Input.vue`：`border-gray-200` / `placeholder:text-gray-400` / `focus-visible:ring-gray-400` → CSS 变量。
-- PWA 全屏应用配置：
-  - 安装 `vite-plugin-pwa` 并集成到 `vite.config.ts`。
-  - 自动生成 Service Worker（`sw.js` + `workbox`），静态资源离线缓存，API 不缓存。
-  - Web App Manifest：`name: "初华的书"`，`display: fullscreen`，`theme_color: #4A9FD9`，`background_color: #D6ECFA`。
-  - 图标生成：基于用户提供图片生成 `icon-192.png`、`icon-512.png`、`apple-touch-icon.png`、`favicon.png`。
-  - `index.html` 更新：`viewport-fit=cover`、theme-color、apple-mobile-web-app 标签、favicon。
-  - CSS 安全区域适配：body 添加 `env(safe-area-inset-top/bottom/left/right)`，防止刘海和底部手势条遮挡内容。
-
-Build
-- 前端 `npm run build` 零错误通过，`manifest.webmanifest`、`sw.js`、`registerSW.js` 均正常生成。
-- 新增依赖：`vite-plugin-pwa`。
-
-Verification
-- Docker 前端镜像重建验证通过：
-  - `docker compose up -d --build`
-  - 前端 `http://localhost:21413` 正常访问
-  - 后端 `http://localhost:9000` 正常访问
-  - PWA 产物（manifest.webmanifest / sw.js / workbox-*.js）正确输出到 dist
-
-## v1.07
-
-Date
-`2026-04-22`
-
-Summary
-本次版本是一次聚焦夜间模式完整适配与阅读页交互优化的补丁更新，全部基于最小改动原则完成：
-- 修复 Naive UI → Shadcn Vue 迁移后遗留的全局暗色模式失效问题（Button、Badge、Alert、Input、Slider、Dialog、Select 等全部 shadcn 组件）。
-- 修复阅读页 Input 组件 `v-model` 双向绑定失效导致的登录页无法登录（P0 BUG）。
-- 优化阅读页交互：新增"返回书架"快捷入口、简化进度面板信息。
-- 修复弹窗/下拉栏在夜间模式下的透明度问题。
-
-Frontend
-- 全局暗色模式配色修复（所有 shadcn 组件统一使用 CSS 变量）：
-  - `Button`：硬编码 `bg-gray-100` / `text-gray-900` → CSS 变量 `--button-*`，夜间 secondary/ghost/link/outline 全部适配。
-  - `Badge`：硬编码 `bg-gray-100` / `text-gray-900` / `bg-blue-50` 等 → CSS 变量 `--badge-*`，夜间半透明暗色背景。
-  - `Alert`：硬编码 `bg-blue-50` / `bg-amber-50` / `bg-green-50` → CSS 变量 `--alert-*`，夜间半透明主题色背景。
-  - `Input`：硬编码 `border-gray-200` / `placeholder:text-gray-400` → CSS 变量，夜间深色输入框。
-  - `Slider`：硬编码 `bg-gray-200` / `bg-gray-900` / `bg-white` → CSS 变量 `--slider-*`，夜间白色滑块 + 半透明轨道。
-  - `DialogContent`：硬编码 `bg-white` / `border-gray-200` → CSS 变量 `--dialog-*`，夜间深紫背景。
-  - `SelectTrigger` / `SelectContent` / `SelectItem`：硬编码 `bg-white` / `text-gray-900` / `focus:bg-gray-100` → CSS 变量 `--select-*`，夜间深紫背景 + 浅色文字。
-- 页面级暗色模式覆盖（`index.css`）：
-  - 书架页搜索框：`--surface-input-bg` 暗色背景。
-  - 书架页表格 hover：`rgba(244, 164, 180, 0.14)`（白天）/ `rgba(255, 143, 171, 0.06)`（夜间）。
-  - 登录页卡片文字：`var(--text-primary)`。
-  - 登录页输入框：`var(--surface-input-bg)` 背景 + `var(--text-primary)` 文字。
-  - 阅读页进度条：`#ffffff` fill + `rgba(255,255,255,0.12)` 轨道（夜间）。
-  - 目录规则页 `.rule-form__textarea` / `.rule-form__radio` / `.backend-switcher__radio` 暗色覆盖。
-- 弹窗透明度修正：
-  - Dialog / Select 夜间背景从 `var(--surface-panel-bg)`（`rgba(255,255,255,0.06)`，几乎透明）调整为 `rgba(37, 37, 64, 0.96)`（深紫，96% 不透明）。
-- P0 BUG 修复：
-  - `Input.vue` 组件缺失 `v-model` 支持，用户输入无法同步到表单 → 添加 `defineModel<string>()`，登录页恢复正常。
-- 阅读页交互优化：
-  - 右侧浮动面板删除冗余进度信息（"已同步到云端 12% · 第 X 章"），仅保留"已同步/未同步"。
-  - 左侧浮窗（`reader-rail`）新增"返回书架"按钮，点击跳转书架页。PC 与移动端同步生效。
-
-Verification
-- 前端 `npm run build` 零错误通过（`vue-tsc -b && vite build`）。
-- Docker 前端镜像重建验证通过：
-  - `docker compose up -d --build`
-  - 前端 `http://localhost:21413` 正常访问
-  - 后端 `http://localhost:9000` 正常访问
-
-## v1.06
-
-Date
-`2026-04-22`
-
-Summary
-本次版本是一次完整的前端 UI 框架迁移：将全站从 Naive UI 迁移到 Shadcn Vue + Tailwind CSS，并彻底移除 naive-ui 依赖。迁移后前端构建产物从约 1036 KB 降至 384 KB（gzip 后 125 KB），chunk 超限警告消失，Docker 构建速度和产物体积均有显著改善。
-
-Frontend
-- 全局迁移 Naive UI → Shadcn Vue + Tailwind CSS：
-  - 全部 24 个 Naive UI 组件均完成替换
-  - `n-button` → Shadcn `Button`
-  - `n-input` / `n-input[type="textarea"]` → Shadcn `Input` / 原生 `textarea`
-  - `n-select` → Reka UI `Select`
-  - `n-card` → 原生 div + Tailwind
-  - `n-alert` → 自定义 `Alert`
-  - `n-badge` / `n-tag` → Shadcn `Badge`
-  - `n-dialog` / `n-modal` → Reka UI `Dialog`
-  - `n-drawer` → 自定义 CSS Drawer（过渡动画 + 遮罩层）
-  - `n-slider` → Reka UI `Slider`
-  - `n-skeleton` → 自定义 `Skeleton`
-  - `n-progress` → 自定义 CSS progress bar
-  - `n-upload` → 原生 `<input type="file">`
-  - `n-data-table` / `n-table` → 原生 HTML table + 手动分页
-  - `n-radio-group` / `n-radio-button` → 自定义 radio
-  - `n-checkbox` → 原生 checkbox
-  - `n-form` / `n-form-item` → 原生 `div` / `label`
-  - `n-empty` → 自定义空状态
-  - `n-popconfirm` → `confirm()` / 自定义 Dialog
-  - `n-space` → `div` + flex gap
-  - `n-message` / `useMessage()` → `vue-sonner` + `notify` 适配层
-- 新增基建文件：
-  - `tailwind.config.js`
-  - `postcss.config.js`
-  - `components.json`
-  - `src/styles/tailwind.css`
-  - `src/lib/utils.ts` (`cn()` 工具函数)
-  - `src/utils/notify.ts` (通知适配层)
-  - `src/components/AppProvider.vue` (全局 Toaster Provider)
-  - `src/components/ui/` 组件库目录（Button、Input、Select、Dialog、Alert、Badge、Card、Skeleton、Slider、Tabs、Sonner、Separator 等）
-- 按页面完成迁移：
-  - `App.vue` / `AppLayout.vue` / `LoginPage.vue` / `BookshelfPage.vue`
-  - `BookDetailPage.vue` / `RuleManagementPage.vue` / `ReaderPage.vue`
-  - `PagePlaceholder.vue` / `BackendSwitchModal.vue` / `BookGroupManagerModal.vue`
-  - `BookGroupSelectorModal.vue` / `ChapterCatalogModalDrawer.vue`
-- 移除 `naive-override.css`（不再需要）
-- 从 `package.json` 移除 `naive-ui`，npm 依赖减少 21 个包
-
-Docs
-- 新建 `frontend/MIGRATION.md`，记录完整迁移过程、组件映射表和构建体积变化
-- 更新 `README.md` 技术栈描述：`Naive UI` → `Shadcn Vue + Tailwind CSS`
-- 更新 `AGENTS.md` 技术栈描述
-- 更新 `frontend/README.md` 技术栈描述
-- 历史文档（`development-process.md`、`docs/IMPLEMENTATION_STEPS.md`）保持原样，反映当时实现决策
-
-Build
-- 前端 `npm run build` 零错误通过（`vue-tsc -b && vite build`）
-- JS 产物：384 KB（gzip: 125 KB）
-- 无 chunk > 500KB 警告
-
-Verification
-- Docker 前端镜像重建验证通过：
-  - `docker compose up -d --build`
-  - 前端 `http://localhost:21413` 正常访问
-  - 后端 `http://localhost:9000` 正常访问
-  - 构建产物中 `naive` 关键词数量为 0
-
-## v1.05
-
-Date
-`2026-03-17`
-
-Summary
-本次版本是一次聚焦阅读页与书架页细节体验的定点修复，不做整页重构，只修正本轮对话中明确指出且已完成验证的问题：
-- 修正书架页顶部工具区排版，让"刷新 / 分组管理 / 编辑 / 上传TXT"稳定处于同一行工具操作区内。
-- 修正阅读页移动端顶部进度信息块仍然显示的问题，仅在手机端隐藏该区块，不影响进度计算、同步与状态管理。
-- 修正阅读页"段间距"设置无明显效果的问题，让设置真实作用到正文段落之间。
-- 修正阅读页"阅读宽度"在手机端不生效的问题，同时保持 PC 端宽度控制逻辑可用。
-- 修正阅读页首段没有首行缩进的问题，统一首段与后续段落的排版表现。
-- 完成最新代码的 Docker 重建与部署验证。
-
-Frontend
-- 书架页工具区响应式样式收口：
-  - 顶部 4 个操作项恢复为单行横向工具区。
-  - 移动端优先保持同一行，使用轻量压缩与横向滚动兜底，不再拆成松散竖排或让"上传TXT"单独掉行。
-- 阅读页移动端顶部进度块修正：
-  - 手机端隐藏"当前进度 / 百分比 / 已同步/待同步"整块 UI。
-  - PC / 大屏保持原样。
-- 阅读页正文排版链路修正：
-  - 正文分段逻辑调整为按换行生成真实段落，避免大段正文合并成单个 `<p>`，让"段间距"设置可以立即体现。
-  - 段落样式新增统一的 CSS 首行缩进，不再依赖原文开头空格。
-  - 为手机端补充独立的阅读宽度映射逻辑，阅读宽度滑块在小屏下也能直接影响正文容器宽度。
-  - 保留章节切换、滚动阅读、进度恢复与同步逻辑，不改阅读业务层。
-
-Verification
-- 已完成阅读页专项回归脚本验证：
-  - `node frontend/scripts/verify-ui-fixes.mjs`
-  - `node frontend/scripts/verify-reader-page-layout.mjs`
-- 前端静态验证通过：
-  - `npm run typecheck`
-  - `npm run build`
-- Docker 部署验证通过：
-  - `docker compose up --build -d`
-  - `GET http://127.0.0.1:24412/` -> `200`
-  - `GET http://127.0.0.1:8000/health` -> `200`
-
-## v1.04
-
-Date
-`2026-03-17`
-
-Summary
-本次版本围绕前端阅读产品体验与多后端接入能力展开，完成了以下几类更新：
-- 新增前端"切换后端"能力，支持本地 / 远程后端切换、运行时请求跟随后端、按后端隔离 token 与登录态。
-- 收口全站最小必要主题变量，统一页面表面层级、圆角、间距与控件尺度，让界面更贴近"简洁阅读感"。
-- 优化切换后端弹窗在 PC / Mobile 下的布局可读性，并让登录页、顶部导航与后端状态展示保持一致。
-- 优化书架页工具栏布局与目录规则页首屏层级。
-- 重点修复目录规则页手机端严重响应式问题，使其在窄屏下可完整显示、可完整操作。
-- 调整阅读页移动端信息展示，仅在手机端隐藏顶部"当前进度 / 百分比 / 待同步"区块，不影响进度计算与同步逻辑。
-
-Frontend
-- 新增后端配置工具，支持本地 / 远程模式、后端地址校验、当前后端摘要显示、切换提示持久化。
-- API 请求层改为运行时解析当前后端地址，避免启动后无法切换 backend 的问题。
-- token 持久化改为按 backend 维度隔离，避免本地与远程后端串用登录态。
-- auth store 新增 backend 上下文同步与切换处理，切换后端时安全清空当前会话。
-- 阅读页 keepalive 保存进度请求已跟随后端切换逻辑。
-- 登录页与应用顶栏新增"切换后端"入口，后端摘要文案统一为中文。
-- 收口最小必要的主题 token：surface、border、shadow、radius、spacing、control height、title / caption 字级。
-- 书架页顶部整理为统一工具栏区域：
-  - 排序 / 搜索 / 分组筛选整合为同一块响应式工具栏。
-  - PC 端优先单行展示，Mobile 端自动拆分为更易点按的多行布局。
-  - 与下方书籍卡片的衔接更自然，但未改动书籍卡片业务逻辑。
-- 目录规则页首屏结构收口：
-  - 顶部介绍区、统计卡片、默认规则工具条的层级更清晰。
-  - 卡片表面、边框、留白节奏统一到同一套阅读型视觉语言。
-- 目录规则页手机端可用性修复：
-  - 顶部标题与说明在手机端可完整换行显示。
-  - 统计卡片在手机端改为横向紧凑排列，避免竖向占用过多空间。
-  - 规则列表在手机端切换为卡片列表，不再沿用不适合窄屏的表格结构。
-  - regex / 长文本统一采用代码块样式并支持横向滚动，不再撑坏布局。
-  - "将规则应用到书籍"与"规则测试与预览"在手机端改为单列优先布局。
-  - 应用结果与测试结果在手机端改为卡片式结果展示，确保完整查看与操作。
-- 阅读页移动端隐藏顶部进度块，仅保留必要的进度与同步逻辑，不影响 PC 端原有布局。
-
-UX
-- 切换后端弹窗从线性表单调整为更清晰的状态卡片 + 模式选择 + 输入区 + 按钮区结构。
-- Mobile 端切换后端弹窗避免了说明文字与控件拥挤、按钮主次不清的问题。
-- 书架页工具栏和目录规则页首屏都改为"内容优先、控件尺度统一、窄屏优先可用"的响应式策略。
-- 目录规则页手机端不再依赖横向滚动表格完成核心操作，显著提升可用性。
-
-Deployment
-- 本轮前端修改已多次通过 Docker 重建并验证容器可正常启动。
-- 最近一次前端 Docker 构建产物为：
-  - `dist/assets/index-D7jv-HUP.css`
-  - `dist/assets/index-BrbQWx2L.js`
-
-Verification
-- 前端已完成 `npm run typecheck` 验证，通过。
-- 前端已完成 `npm run build` 验证，通过。
-- Docker 已完成 `docker compose up -d --build` 与 `docker compose up -d --build frontend` 验证。
-- 运行中的服务验证通过：
-  - `GET http://127.0.0.1:24412/` -> `200`
-  - `GET http://127.0.0.1:8000/health` -> `200`
-
-## v1.03
-
-Feature
-实现用户偏好同步：
-
-- 书架页排序方式、搜索条件、当前分组改为账号级持久化
-- 修复从详情页 / 阅读页返回书架后状态被默认值覆盖的问题
-- 阅读页设置新增并同步：
-  - 行高
-  - 字间距
-  - 段间距
-  - 字体大小
-  - 阅读宽度
-  - 主题
-- 同一账号跨设备可恢复相同的书架筛选状态与阅读展示偏好
-
-Backend
-
-- `users` 表新增 `preferences_json` 偏好字段
-- 新增用户偏好接口：
-  - `GET /api/preferences`
-  - `PATCH /api/preferences`
-- 对旧数据、非法值、缺失字段做兼容归一化
-- 启动时自动补齐旧 SQLite 数据库的偏好字段
-
-Frontend
-
-- 新增统一 preferences store，作为书架状态和阅读设置的前端真源
-- 书架页初始化优先读取服务端偏好，没有则回退默认值
-- 阅读页初始化优先读取服务端偏好，没有则兼容导入旧 `localStorage` 阅读设置
-- 搜索与阅读设置改为 debounce 同步，减少高频请求
-
-Docs
-
-- README 同步更新多端偏好恢复与书架状态恢复说明
-
-## v1.02
-
-Fix
-修复书籍标题编辑逻辑错误：
-
-此前编辑书籍信息时只修改了 description 字段，
-书架卡片主标题仍然显示原始文件名。
-
-现在调整为：
-
-- 编辑书名会正确更新 book.title
-- 书架卡片主标题同步更新
-- 书籍详情页标题同步更新
-- 阅读页面标题同步更新
-
-Improvement
-
-优化书籍元数据结构：
-
-Book 字段规范：
-
-title -> 主书名（用于显示）
-description -> 简介 / 备注
-file_name -> 原始上传文件名（内部使用）
-
-系统不再使用原始文件名作为默认显示标题。
-
-Version: 1.02
-
-# v1.01
-
-## Version
-
-`v1.01`
-
-## Date
-
-`2026-03-16`
-
-## Summary
-
-`v1.01` 主要聚焦于两类更新：
-
-- 书籍详情页目录交互优化
-- Swagger 文档端点访问控制修复
-
-这一版的目标是同时改善阅读产品的使用体验与后端调试入口的环境隔离能力：
-
-- 前端让书籍详情页从"目录占满页面"的长内容布局，切换为更轻量的"按钮 + 弹层"交互。
-- 后端让接口文档端点真正跟随 `DEBUG` 开关工作，避免在非调试环境继续暴露 Swagger UI / OpenAPI 文档。
-
-## Changes
-
-### 1. 书籍详情页目录展示改造
-
-本次更新对书籍详情页的目录展示方式进行了重新整理：
-
-- 书籍详情页不再默认整页展开目录列表
-- 目录改为通过"查看目录"按钮触发弹窗 / 抽屉显示
-- 详情页原先的目录说明卡片 / 注释区域已移除
-- 页面主体只保留书籍信息、文件信息、目录规则信息等核心内容
-- 用户现在可以在弹层中浏览章节目录，并直接点击章节跳转到阅读页
-
-### 2. 文档与说明同步完善
-
-为配合本次更新，项目文档同步补充了：
-
-- 书籍详情页目录交互的新行为说明
-- 长目录书籍的浏览体验优化说明
-- Swagger UI 的用途说明
-- `DEBUG=true` 与 `DEBUG=false` 下 API 文档端点的行为区别
-- 生产环境关闭调试文档入口的建议
-
-## UX Improvement
-
-### 书籍详情页目录交互优化
-
-这次 UX 优化主要解决的是：当一本书的章节很多时，详情页会被完整目录拉得很长，导致主体信息被稀释、滚动距离过长、重点不够集中。
-
-调整后的交互表现为：
-
-- 目录内容不再直接堆叠在详情页中
-- 用户通过"查看目录"按钮进入目录弹层
-- 桌面端更适合以弹窗方式查看目录
-- 小屏设备可用抽屉方式浏览目录
-- 目录说明提示块已经删除，详情页视觉更干净、层次更集中
-
-这让书籍详情页在长目录书籍场景下更容易浏览，也更符合"详情页看概览、目录交互放到弹层里"的使用预期。
-
-## Bug Fixes
-
-### 修复 DEBUG=false 时 Swagger UI / OpenAPI 文档端点仍可访问的问题
-
-#### 问题说明
-
-在此前的实现中，即使配置了 `DEBUG=false`，以下文档端点仍然可以访问：
-
-- `/docs`
-- `/redoc`
-- `/openapi.json`
-
-这与"非调试环境应关闭接口文档入口"的预期不一致。
-
-#### 背景说明
-
-`http://127.0.0.1:8000/docs` 是 FastAPI 自动生成的 Swagger UI，主要用于：
-
-- 查看所有后端接口、参数、返回结构
-- 直接在浏览器中调接口做测试
-- 方便前后端联调和排错
-
-因此，它在本地开发阶段非常有价值，但在 `DEBUG=false` 的非调试环境下不应继续对外暴露。
-
-#### 修复后的行为
-
-本次修复后：
-
-- `DEBUG=false` 时，自动关闭以下文档端点：
-  - `/docs`
-  - `/redoc`
-  - `/openapi.json`
-- `DEBUG=true` 时，这些文档端点仍然可用，方便本地开发和调试
-
-#### 修复价值
-
-这个修复让后端调试入口真正受环境开关控制，减少了非调试环境继续暴露接口说明与调试入口的风险，同时保留了开发阶段的便利性。
-
-## Notes
-
-### 部署与使用建议
-
-- 本地开发需要 Swagger UI 时，请在项目根目录 `.env` 中设置 `DEBUG=true`
-- 准备部署到共享环境或生产环境时，建议保持 `DEBUG=false`
-- 同时应修改默认 `SECRET_KEY` 与默认管理员密码，避免继续使用示例值
+# 更新日志
+
+本文记录面向使用者的主要变化。历史版本中的运行地址和构建产物哈希不再保留；当前部署方式以 [README.md](./README.md) 和仓库配置为准。
+
+## v1.10 — 2026-07-16
+
+本版聚焦目录规则应用的可预期性、全站反馈一致性和移动端目录体验。后端 API、数据库结构以及阅读进度字段语义均未改变。
+
+### 新增
+
+- 书籍详情页新增“应用后预览”：
+  - 选择目录规则后，使用现有 `POST /api/chapter-rules/test` 对当前书籍进行预检。
+  - 展示预计章节总数和前 10 个章节标题。
+  - `FULL_TEXT` 规则直接显示单章节“全文”。
+  - 零匹配时明确提示实际应用将降级为“全文”单章节。
+  - 使用请求序号忽略过期响应，快速切换规则时不会被旧结果覆盖。
+- 新增全局 `AppNotificationDialog` 和通知队列：
+  - 统一成功、错误、提示、警告及确认交互。
+  - 删除书籍、分组和自定义规则不再调用浏览器原生 `confirm()`。
+  - 危险操作支持独立标题、按钮文案和破坏性样式。
+
+### 改进
+
+- 移除 `vue-sonner`，应用反馈统一使用 Reka Dialog 与现有主题变量，明暗主题和移动端样式保持一致。
+- 阅读页目录增加章节滑块快速跳转；长目录继续使用虚拟列表，打开目录时定位当前章节。
+- 阅读页与书籍详情目录加宽滚动条，触屏设备更容易拖动。
+- 移动端应用顶栏改为品牌、账号、导航的网格布局，隐藏冗长后端摘要。
+- PWA Manifest 的 `display` 从 `fullscreen` 调整为 `standalone`，隐藏浏览器地址栏但保留系统状态区域。
+- 远程后端配置增加 Mixed Content 预校验；HTTPS 页面会拒绝 HTTP 后端地址。
+- HTTPS 请求失败时提供更明确的地址、服务和 SSL/TLS 排查提示。
+- Docker 默认宿主机端口统一为前端 `7234`、后端 `8234`，Compose 默认固定 `DEBUG=false`。
+
+### 行为说明
+
+- 规则预览只读取测试结果，不会修改书籍目录；只有点击“重新解析目录”才会写入章节数据。
+- 规则测试接口最多返回前 20 个匹配项，所以详情页最多展示其中前 10 个标题，但总章节数使用完整匹配计数。
+- 本版不包含手势返回书架功能；相关试验改动已经回滚。
+
+### 升级提示
+
+- 前端依赖有变化，更新后需要重新构建镜像或重新执行 `npm install`。
+- PWA 用户若仍加载旧资源，请先强制刷新；必要时注销旧 Service Worker 后重新打开。
+- 当前 Compose 端口和 `DEBUG` 为固定值，修改根 `.env` 中同名端口或 `DEBUG` 不会覆盖它们；详情见 README。
+
+### 验证
+
+- `npm run typecheck`：通过。
+- `npm run build`：通过，PWA Manifest、Service Worker 和 Workbox 产物正常生成。
+- `node frontend/scripts/verify-ui-fixes.mjs`：通过。
+- `node frontend/scripts/verify-reader-page-layout.mjs`：通过。
+- `docker compose config`：通过。
+- `pytest -q`：`72 passed, 2 failed`。失败项均位于 `backend/tests/test_deployment_config.py`，仍断言旧端口 `7000/21412`；当前实际配置为 `8234/7234`，测试需要后续同步。
+
+## v1.09 — 2026-04-24
+
+- 后端新增原生 ASGI `ReflectCORSMiddleware`，优先处理 OPTIONS 并反射请求 Origin，修复域名、反向代理和隧道访问中的跨域失败。
+- 新增 `POST /api/auth/change-password`；验证旧密码后更新密码，成功后前端退出当前会话。
+- 修复暗色主题下弹窗、抽屉、下拉层和输入区的背景透明度及硬编码颜色。
+- 优化移动端用户菜单、书架卡片密度和详情页返回操作。
+- 移除书架卡片右上角“开始/继续阅读”标签。
+
+## v1.08 — 2026-04-22
+
+- 日间主题调整为天空蓝与樱花粉配色，页面和基础组件统一使用主题变量。
+- 引入 `vite-plugin-pwa`，生成 Manifest、Service Worker 和应用图标，支持安装到桌面。
+- 增加安全区域适配，改善刘海屏和底部手势区域显示。
+- 此版本最初使用 `fullscreen`；已在 v1.10 改为 `standalone`。
+
+## v1.07 — 2026-04-22
+
+- 完成 Shadcn 风格基础组件的暗色模式适配。
+- 修复 `Input` 缺失 `v-model` 导致表单无法输入的问题。
+- 阅读页新增返回书架入口并精简同步状态展示。
+- 修复 Dialog、Select 等浮层在暗色主题下过度透明的问题。
+
+## v1.06 — 2026-04-22
+
+- 前端从 Naive UI 迁移到 Shadcn Vue 风格组件、Reka UI 与 Tailwind CSS。
+- 替换按钮、输入框、选择器、对话框、抽屉、表格、滑块、上传和进度条等组件。
+- 移除 `naive-ui`，补充 `components.json`、Tailwind/PostCSS 配置和 [frontend/MIGRATION.md](./frontend/MIGRATION.md)。
+- 此版本引入的 `vue-sonner` 通知已在 v1.10 被应用内对话框替代。
+
+## v1.05 — 2026-03-17
+
+- 收口书架页顶部工具区的响应式排列。
+- 手机端隐藏阅读页顶部进度块，但保留进度计算和同步。
+- 正文按换行生成真实段落，修复段间距和首行缩进。
+- 增加手机端阅读宽度映射，使宽度设置在窄屏生效。
+
+## v1.04 — 2026-03-17
+
+- 新增本地 / 远程后端切换，API 请求在运行时解析当前后端。
+- Token 按后端维度隔离，切换后端时清除当前会话并重新登录。
+- 增加后端地址校验和当前后端摘要。
+- 重整书架工具栏、规则管理页首屏和移动端规则卡片布局。
+- 收口全站 surface、border、shadow、radius、spacing 等主题 token。
+
+## v1.03 — 2026-03-16
+
+- `users` 表增加 `preferences_json`，新增 `GET/PATCH /api/preferences`。
+- 账号级同步书架排序、搜索、当前分组和阅读设置。
+- 阅读设置包含字号、行高、字间距、段间距、阅读宽度与主题。
+- 兼容导入旧浏览器 `localStorage` 偏好，并归一化非法或缺失字段。
+
+## v1.02 — 2026-03-16
+
+- 修复编辑书名只改到简介字段的问题。
+- 统一 `title` 为展示书名、`description` 为简介、`file_name` 为原始上传文件名。
+- 书架、详情和阅读页在元数据更新后显示一致的书名。
+
+## v1.01 — 2026-03-16
+
+- 书籍详情页不再直接展开完整目录，改为“查看目录”按钮与桌面弹窗 / 移动抽屉。
+- 章节可从目录直接跳转到阅读页，长目录不再拉长详情页。
+- FastAPI 文档端点与 `DEBUG` 绑定：调试模式开放 `/docs`、`/redoc`、`/openapi.json`，非调试模式关闭。

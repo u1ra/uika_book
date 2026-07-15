@@ -1,683 +1,364 @@
 # 初华的书
 
-初华的书 是一个面向个人使用场景的 TXT 在线阅读器，支持上传本地 TXT 文件、自动解析章节、管理书架、同步阅读进度，以及按自己的文本格式定制章节识别规则。
+一个面向个人自托管场景的 TXT 在线阅读器。上传本地 TXT 后，系统会检测编码、解析章节并保存到书架；阅读时只按当前章节加载正文，并以 `chapter_index + char_offset` 同步阅读位置。
 
-当前版本：`v1.09`
+当前文档版本：`v1.10`
 
-这一版主要围绕以下方向做了完善：
+更新记录：[UPDATE.md](./UPDATE.md)
 
-- **修复跨域问题**：新增原生 ASGI `ReflectCORSMiddleware`，反射任意 Origin，解决通过反向代理 / 域名穿透场景下的 CORS 失败问题。
-- **新增更改密码功能**：后端提供 `POST /api/auth/change-password` 接口，前端在右上角用户下拉菜单中集成更改密码弹窗，带完整表单校验。
-- **夜间模式 UI 修复**：修复弹窗 / 抽屉 / 下拉栏在暗色主题下的透明度与硬编码颜色问题，全部组件统一使用 CSS 变量适配。
-- **移动端体验优化**：修复用户下拉菜单错位、精简书架卡片信息密度、优化详情页返回按钮样式。
-- **全局去掉书架卡片阅读标签**：`.bookshelf-item__badge` 全局隐藏，移动端进一步隐藏作者 / 章节数 / 字数 / 收录时间，让卡片更清爽。
+## 核心能力
 
-当前仓库采用轻量前后端分离架构：
+- TXT 上传，兼容 UTF-8、GBK、UTF-16，并统一保存为 UTF-8
+- 内置中文章节、英文章节、卷章混合和全文模式规则
+- 自定义章节正则、flags、规则测试、默认规则和整书重解析
+- 规则应用前预览：展示预计章节数、前 10 个标题和全文降级提示
+- 书架搜索、排序、分组、封面、元数据编辑和继续阅读
+- 按章节获取正文，支持上一章、下一章、目录快速跳转
+- 字号、行高、字间距、段间距、阅读宽度和明暗主题设置
+- 以账号为主数据源同步阅读进度、阅读偏好和书架筛选状态
+- 本地 / 远程后端切换，登录 token 按后端隔离
+- PC、移动端响应式界面和可安装的 PWA
+- 应用内统一提示及危险操作确认对话框
 
-- 前端：Vue 3 + Vite + TypeScript + Vue Router + Pinia + Shadcn Vue + Tailwind CSS + PWA
-- 后端：FastAPI + SQLAlchemy + SQLite
-- 部署方式：Docker Compose
-- 访问方式：支持本地访问、局域网访问、反向代理 + 域名穿透（OpenResty + FRP）
+如果正则没有匹配到章节，后端会自动降级为“全文”单章节，保证书籍仍可阅读。
 
-本 README 基于当前仓库真实结构编写，只保留源码目录和关键运行目录，不展开 `node_modules`、`dist`、`.venv` 之类的生成产物目录。
+## 技术栈
 
-开发过程及思路见 [`development-process.md`](./development-process.md)。
+| 层级 | 技术 |
+| --- | --- |
+| 前端 | Vue 3、Vite、TypeScript、Vue Router、Pinia |
+| UI | Shadcn Vue 风格组件、Reka UI、Tailwind CSS、Lucide Icons |
+| PWA | vite-plugin-pwa、Workbox |
+| 后端 | FastAPI、SQLAlchemy 2、Pydantic 2 |
+| 存储 | SQLite、本地文件系统 |
+| 部署 | Docker Compose、Nginx、Uvicorn |
 
-## 使用方法
+## 快速开始：Docker Compose
 
-推荐使用流程如下：
+这是当前最省事的运行方式。
 
-1. 使用默认账号登录系统。
-2. 在书架页上传 `.txt` 文件。
-3. 如果默认章节规则识别不理想，到“目录规则”页测试或新建自定义规则。
-4. 在书籍详情页通过“查看目录”按钮打开目录弹层，浏览章节、切换章节规则并重新解析。
-5. 进入阅读页继续阅读，系统会按 `chapter_index + char_offset` 同步进度。
-6. 根据需要调整字体大小、行高、字间距、段间距、阅读宽度、主题，并在不同设备间同步这些偏好与书架筛选状态。
+### 1. 准备环境
 
-## PWA 安装到手机 / 平板
+- Docker Engine 或 Docker Desktop
+- Docker Compose v2
 
-本项目已配置为 PWA（Progressive Web App），应用名称为 **「初华的书」**，支持安装到安卓 / iOS 设备桌面，体验接近原生 App。
-
-### 安卓（Chrome）
-
-1. 用手机 Chrome 访问前端地址（如 `http://你的IP:21413`）
-2. 点击地址栏右侧 **⋮** → **"添加到主屏幕"**
-3. 确认安装，桌面会出现「初华的书」图标
-4. 点击图标打开，进入 `standalone` 独立应用模式，隐藏浏览器地址栏，体验接近原生 App
-
-### iOS（Safari）
-
-1. 用 Safari 访问前端地址
-2. 点击底部分享按钮 → **"添加到主屏幕"**
-3. 确认添加即可
-
-### PWA 特性
-
-- **离线可用**：静态资源（JS / CSS / 字体 / 图标）会自动缓存，无网络时仍可打开应用
-- **独立应用体验**：`display: standalone`，隐藏浏览器地址栏，保留系统状态栏，体验接近原生 App
-- **安全区域适配**：自动适配刘海屏、圆角屏、底部手势条，内容不会被遮挡
-- **自动更新**：应用有新版本时，Service Worker 会自动刷新缓存
-
-> **注意**：API 请求（如书架列表、章节内容、进度同步）仍需网络连接，离线时无法获取新书或同步进度。
-
-## 通过 Docker Compose 部署
-
-本项目当前**推荐且明确支持**的部署方式是 **Docker Compose**，适合本地运行、家庭服务器以及轻量自托管场景。
-
-### 运行前准备
-
-开始前请确认你的环境已满足以下条件：
-
-* 已安装 Docker Desktop，或已安装 Docker Engine
-* 已启用 Docker Compose
-
-### 1. 获取项目源码
-
-先克隆仓库并进入项目目录：
+### 2. 获取源码并准备配置
 
 ```bash
 git clone https://github.com/u1ra/uika_book.git
 cd uika_book
+cp .env.example .env
 ```
 
-### 2. 准备环境变量
-
-在项目根目录复制一份环境变量文件：
-
-**Windows PowerShell**
+Windows PowerShell：
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-**macOS / Linux**
+首次启动前至少应修改 `.env` 中的以下值：
 
-```bash
-cp .env.example .env
-```
+- `SECRET_KEY`
+- `DEFAULT_ADMIN_USERNAME`
+- `DEFAULT_ADMIN_PASSWORD`
 
-如需修改端口、默认账号、密钥或调试行为，请编辑根目录下生成的 `.env` 文件。
+`VITE_API_BASE_URL` 建议保持为空。这样浏览器会请求当前站点的同源 `/api`，由前端 Nginx 转发到后端，局域网和反向代理部署都更简单。
 
-常用配置项包括：
-
-* `BACKEND_PORT`：宿主机后端端口，默认 `8234`
-* `FRONTEND_PORT`：宿主机前端端口，默认 `7234`
-* `VITE_API_BASE_URL`：前端构建时使用的 API 地址
-* `CORS_ORIGINS`：允许访问后端的浏览器来源
-* `SECRET_KEY`：后端签名密钥
-* `DEFAULT_ADMIN_USERNAME`：默认管理员用户名
-* `DEFAULT_ADMIN_PASSWORD`：默认管理员密码
-* `DEBUG`：后端调试开关，同时影响 Swagger / OpenAPI 文档是否开放
-
-如果你修改了前后端端口，建议同时检查 `VITE_API_BASE_URL` 和 `CORS_ORIGINS`，以避免前端仍访问旧地址。
-
-在大多数 Docker 部署场景下，建议保持 `VITE_API_BASE_URL` 为空，让前端通过同源 `/api` 转发访问后端，这样在局域网、公网或反向代理场景下会更省心。
-
-### 3. 启动服务
-
-首次启动，或在更新代码、依赖后，建议执行：
+### 3. 构建并启动
 
 ```bash
 docker compose up --build -d
 ```
 
-如果只是日常启动已有服务，直接执行：
+默认访问地址：
+
+| 服务 | 地址 |
+| --- | --- |
+| 前端 | `http://localhost:7234` |
+| 后端 | `http://localhost:8234` |
+| 健康检查 | `http://localhost:8234/health` |
+
+当前 [docker-compose.yml](./docker-compose.yml) 将宿主机端口直接写为 `7234` 和 `8234`。`.env.example` 中的 `FRONTEND_PORT`、`BACKEND_PORT` 目前不会覆盖这两个映射；如需换端口，请修改 Compose 文件的 `ports`。
+
+Compose 同样把后端 `DEBUG` 固定为 `false`，所以 Docker 部署默认不开放 `/docs`、`/redoc` 和 `/openapi.json`。如需在受控环境中使用 Swagger，请先将 Compose 中的 `DEBUG` 改为 `${DEBUG:-false}` 或 `true`，再重建后端。
+
+### 4. 常用命令
 
 ```bash
-docker compose up -d
-```
+# 查看状态
+docker compose ps
 
-### 4. 初始化说明
-
-首次启动时，后端会自动完成以下初始化操作：
-
-* 创建 `backend/data/` 数据目录
-* 创建 `backend/uploads/` 上传目录
-* 初始化 SQLite 数据库
-* 创建所有数据表
-* 写入内置章节规则
-* 创建默认管理员账号
-* 为已有用户补齐默认书架分组
-
-首次初始化时，系统会自动写入一个默认管理员：
-
-- 用户名：`admin`
-- 密码：`admin123`
-
-如需修改，请在第一次启动前编辑项目根目录 `.env` 中的：
-
-- `DEFAULT_ADMIN_USERNAME`
-- `DEFAULT_ADMIN_PASSWORD`
-
-注意：
-
-- 这两个值只会在“默认管理员尚不存在”时生效。
-- 如果数据库已经初始化过，单纯修改 `.env` 不会自动重置已有账号密码。
-- 当前 SQLite 数据库默认保存在 `backend/data/app.db`。如果你是本地测试环境，且确认可以清空已有数据，可以删除该数据库后重新执行 `docker compose up --build -d` 让系统重新初始化。
-
-**如何维护默认管理员账号**
-
-如果数据库里已经存在默认管理员，单纯修改 `.env` 中的 `DEFAULT_ADMIN_USERNAME` 或 `DEFAULT_ADMIN_PASSWORD`，都不会自动改写已有管理员记录。应用启动时也不会替你把旧管理员自动改名；这类操作需要手动运行维护脚本。
-
-当前推荐使用：
-
-```bash
-python scripts/manage_admin_user.py
-```
-
-Docker 部署场景可以直接执行：
-
-```bash
-docker compose exec backend python scripts/manage_admin_user.py
-```
-
-**重置当前默认管理员密码**
-
-如果数据库中已经存在 `DEFAULT_ADMIN_USERNAME`，脚本会执行 `reset password`：
-
-```bash
-docker compose exec backend python scripts/manage_admin_user.py --password "new-password"
-```
-
-如果不显式传参，脚本会默认读取当前配置中的：
-
-- `DEFAULT_ADMIN_USERNAME`
-- `DEFAULT_ADMIN_PASSWORD`
-
-**将旧默认管理员改名为新用户名**
-
-如果数据库中不存在当前 `DEFAULT_ADMIN_USERNAME`，但仍存在旧默认管理员（例如 `admin`），脚本会执行 `rename admin`，把旧管理员改名为新用户名，并同步更新密码。
-
-最常见的做法是先在 `.env` 中改好：
-
-- `DEFAULT_ADMIN_USERNAME=contersion`
-- `DEFAULT_ADMIN_PASSWORD=your-new-password`
-
-然后执行：
-
-```bash
-docker compose exec backend python scripts/manage_admin_user.py
-```
-
-如果你希望显式指定旧用户名、新用户名和密码，也可以执行：
-
-```bash
-docker compose exec backend python scripts/manage_admin_user.py --old-username admin --new-username contersion --password "new-password"
-```
-
-本地直接运行后端时，同样适用：
-
-```bash
-python scripts/manage_admin_user.py --old-username admin --new-username contersion --password "new-password"
-```
-
-脚本行为说明：
-
-- 默认读取当前配置中的 `DEFAULT_ADMIN_USERNAME` 和 `DEFAULT_ADMIN_PASSWORD`
-- `--old-username` 和 `--new-username` 用于显式执行管理员改名
-- `--password` 的优先级高于 `.env` / 当前环境变量
-- 如果数据库中已存在当前 `DEFAULT_ADMIN_USERNAME`，脚本只会重置该用户密码
-- 如果当前默认管理员不存在，但旧默认管理员 `admin` 存在，脚本会尝试把 `admin` 改名为新的默认管理员用户名
-- 如果 `new_username` 已存在，脚本不会直接覆盖，而是明确报错提示
-- 如果旧用户名和新用户名都不存在，脚本会明确提示，不会盲目新增多个管理员
-- 脚本只在你手动执行时生效，不会在应用启动时自动改名
-
-### 5. 访问地址
-
-服务启动后，可通过以下地址访问：
-
-* 前端页面：`http://localhost:7234`
-* 后端接口：`http://localhost:8234`
-* 健康检查：`http://localhost:7000/health`
-* Swagger 文档：`http://localhost:7000/docs`（仅在 `DEBUG=true` 时可用）
-
-如果你修改了端口，请将上面的地址替换为实际配置值。
-
-### 6. 常用命令
-
-查看服务日志：
-
-```bash
+# 查看日志
 docker compose logs -f backend
 docker compose logs -f frontend
-```
 
-停止服务：
+# 更新代码或依赖后重建
+docker compose up --build -d
 
-```bash
+# 停止并移除容器；不会删除挂载的数据目录
 docker compose down
 ```
 
-重新构建并启动：
+## 首次启动与数据目录
 
-```bash
-docker compose up --build -d
+后端启动时会自动：
+
+1. 创建数据、上传和封面目录。
+2. 创建或连接 SQLite 数据库。
+3. 创建数据表，并为旧库补充 `cover_path`、`preferences_json` 字段。
+4. 写入内置章节规则。
+5. 在目标用户名不存在时创建默认管理员。
+6. 为没有分组的存量书籍补齐默认分组。
+
+Docker 下的数据持久化位置：
+
+```text
+backend/data/app.db           # SQLite 数据库
+backend/uploads/raw/          # 原始上传文件
+backend/uploads/books/        # UTF-8 标准化正文
+backend/uploads/covers/       # 自定义封面
 ```
 
+默认账号来自 `.env`。示例配置为 `admin / admin123`，只适合首次本地体验，请勿直接用于公网部署。
 
+管理员只会在数据库中不存在目标用户名时创建。已有数据库不会因修改 `.env` 自动改名或重置密码，可使用维护脚本：
 
+```bash
+# 按当前 DEFAULT_ADMIN_* 配置维护账号
+docker compose exec backend python scripts/manage_admin_user.py
 
-## API 文档与调试说明
+# 重置当前默认管理员密码
+docker compose exec backend python scripts/manage_admin_user.py --password "new-password"
 
-`http://127.0.0.1:8234/docs` 对应的是 FastAPI 自动生成的 Swagger UI。它主要用于：
+# 显式改名并更新密码
+docker compose exec backend python scripts/manage_admin_user.py \
+  --old-username admin \
+  --new-username reader \
+  --password "new-password"
+```
 
-- 查看所有后端接口、参数、返回结构
-- 直接在浏览器中调接口做测试
-- 方便前后端联调和排错
+也可以登录后从右上角用户菜单修改当前密码；成功后会退出登录。
 
-当前版本中，接口文档端点的行为已经和 `DEBUG` 开关绑定：
+## 本地开发
 
-- `DEBUG=true` 时，以下端点可访问：
-  - `/docs`
-  - `/redoc`
-  - `/openapi.json`
-- `DEBUG=false` 时，以上端点会自动关闭
+### 后端
 
-这次修复解决了“即使在 `DEBUG=false` 情况下，Swagger UI 和 OpenAPI 文档端点仍然可访问”的问题。
+要求 Python 3.11+。
 
-生产环境建议：
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
 
-- 使用 `DEBUG=false`
-- 不对公网暴露调试文档入口
-- 同时修改默认 `SECRET_KEY`
-- 不要继续使用默认管理员密码
+Windows PowerShell 使用 `.\.venv\Scripts\Activate.ps1` 激活虚拟环境。
 
-## 目录结构
+本地 `backend/.env.example` 默认 `DEBUG=true`，因此开发服务器可访问：
 
-下面是当前仓库中与开发和运行直接相关的真实结构：
+- API：`http://localhost:8000`
+- 健康检查：`http://localhost:8000/health`
+- Swagger：`http://localhost:8000/docs`
+
+### 前端
+
+要求 Node.js 20+；Dockerfile 当前使用 Node 20 Alpine。
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Vite 开发服务器默认运行在 `http://localhost:24412`，并将 `/api`、`/health` 代理到 `http://127.0.0.1:8000`。
+
+常用前端命令：
+
+```bash
+npm run typecheck
+npm run build
+npm run preview
+```
+
+后端测试：
+
+```bash
+cd backend
+pytest -q
+```
+
+项目还提供两个阅读页静态回归脚本：
+
+```bash
+node frontend/scripts/verify-ui-fixes.mjs
+node frontend/scripts/verify-reader-page-layout.mjs
+```
+
+## 使用流程
+
+1. 登录后进入书架，上传 `.txt` 文件。
+2. 系统使用默认章节规则解析正文，并将书放入默认分组。
+3. 可在书架中搜索、排序、分组，或进入详情页补充书名、作者、简介和封面。
+4. 如果目录不理想，在“目录规则”页测试或创建正则规则。
+5. 在详情页选择规则时先查看应用后预览，确认后再重新解析目录。
+6. 从详情页或目录进入阅读器，系统按章节加载正文并自动同步进度。
+
+### 目录规则
+
+支持的 flags：
+
+- `IGNORECASE` / `i`
+- `MULTILINE` / `m`
+- `DOTALL` / `s`
+- `VERBOSE` / `x`
+- `FULL_TEXT`：跳过正则，将整本书作为一个章节
+
+规则测试可使用已上传书籍或直接输入文本片段，返回总匹配数和前 20 个匹配项。详情页的规则预览会展示前 10 个标题；没有匹配时明确提示将降级为“全文”。
+
+### 阅读与同步
+
+- 章节正文通过 `/api/books/{book_id}/chapters/{chapter_index}` 单章获取。
+- 阅读位置以 `chapter_index + char_offset` 为准，`percent` 只用于显示。
+- 页面滚动时节流同步；切章、隐藏页面、离开阅读页和关闭页面前会再次尝试保存。
+- 服务端以 `updated_at` 处理进度冲突，较旧的提交不会覆盖较新的位置。
+- 阅读偏好和书架筛选状态保存在用户的 `preferences_json` 中，浏览器本地存储仅作为兼容与恢复兜底。
+
+## 切换后端
+
+登录页和应用顶栏均可打开“切换后端”：
+
+- 本地模式：使用 `VITE_LOCAL_API_BASE_URL`、兼容的 `VITE_API_BASE_URL`，或默认同源地址。
+- 远程模式：填写完整的 `http://` 或 `https://` 后端根地址，不要附带 `/api`、查询参数或锚点。
+
+切换后会清除相关后端的登录态并要求重新登录。Token 按后端地址隔离，避免本地和远程会话串用。
+
+HTTPS 页面不能调用 HTTP 后端，这是浏览器 Mixed Content 限制；此时远程后端也必须提供 HTTPS。
+
+## PWA
+
+生产构建会生成 Web App Manifest 和 Service Worker，应用以 `standalone` 模式运行。安装通常要求 HTTPS 安全上下文；`localhost` 是浏览器允许的开发例外。
+
+- Android Chrome：浏览器菜单中选择“安装应用”或“添加到主屏幕”。
+- iOS Safari：分享菜单中选择“添加到主屏幕”。
+
+Service Worker 只预缓存前端应用壳和本地静态资源，不缓存 API 响应。离线时可能仍能打开界面，但无法重新获取书架、章节或同步进度。
+
+前端更新后如果仍看到旧界面，可先强制刷新；仍未更新时，在浏览器开发者工具中注销旧 Service Worker 后重新加载。
+
+## 反向代理与 CORS
+
+前端 Nginx 已将以下路径转发到后端容器：
+
+- `/api/`
+- `/media/covers/`
+- `/health`
+
+优先使用同源转发，只向外暴露前端服务。若前后端分属不同域名，后端的原生 `ReflectCORSMiddleware` 会反射请求中的 `Origin` 并处理预检请求；它位于标准 `CORSMiddleware` 外层。
+
+如果通过域名或隧道访问仍出现跨域错误，优先确认反向代理是否保留 `Origin` 请求头，以及 OPTIONS 请求是否到达后端。由于反射中间件接受任意 Origin，`CORS_ORIGINS` 不是当前实现的严格访问控制边界；不要依赖它保护公网接口。
+
+## API 概览
+
+除系统健康检查、登录和封面静态文件外，业务接口均需要 `Authorization: Bearer <token>`。
+
+| 模块 | 主要接口 |
+| --- | --- |
+| 系统 | `GET /`、`GET /health` |
+| 认证 | `POST /api/auth/login`、`GET /api/auth/me`、`POST /api/auth/change-password` |
+| 书架 | `GET /api/books`、`POST /api/books/upload`、`GET/PUT/PATCH/DELETE /api/books/{id}` |
+| 封面 | `POST/DELETE /api/books/{id}/cover`、`GET /media/covers/...` |
+| 分组 | `GET/POST /api/book-groups`、`PUT/DELETE /api/book-groups/{id}`、`GET/PUT /api/books/{id}/groups` |
+| 章节 | `GET /api/books/{id}/chapters`、`GET /api/books/{id}/chapters/{index}`、`POST /api/books/{id}/reparse` |
+| 进度 | `GET/PUT /api/books/{id}/progress` |
+| 规则 | `GET/POST /api/chapter-rules`、`PUT/DELETE /api/chapter-rules/{id}`、`POST /api/chapter-rules/test` |
+| 偏好 | `GET/PATCH /api/preferences` |
+
+错误响应采用统一结构：
+
+```json
+{
+  "success": false,
+  "detail": "Request validation failed",
+  "error": {
+    "code": "validation_error",
+    "message": "Request validation failed",
+    "details": []
+  }
+}
+```
+
+## 项目结构
 
 ```text
 .
-├─ backend/
-│  ├─ app/
-│  │  ├─ core/             # 配置、数据库、依赖、鉴权、异常处理
-│  │  ├─ models/           # SQLAlchemy 模型（users / books / book_chapters / reading_progress / chapter_rules / book_groups / book_group_memberships）
-│  │  ├─ routers/          # FastAPI 路由（auth / books / chapter-rules / book-groups / preferences / health）
-│  │  ├─ schemas/          # Pydantic 数据结构
-│  │  ├─ services/         # 业务逻辑
-│  │  ├─ utils/            # 编码、正则、文件等工具
-│  │  ├─ init_data.py      # 初始化建库与种子数据
-│  │  └─ main.py           # 后端入口（含 ReflectCORSMiddleware）
-│  ├─ tests/               # 后端测试
-│  ├─ scripts/             # 运维/维护脚本，如默认管理员维护
-│  ├─ data/                # SQLite 数据目录（运行期）
-│  ├─ uploads/             # TXT 原始文件与标准化文本（运行期）
-│  ├─ Dockerfile
-│  ├─ requirements.txt
-│  └─ README.md
-├─ frontend/
-│  ├─ src/
-│  │  ├─ api/              # 前端 API 请求封装（含后端切换逻辑）
-│  │  ├─ components/       # 通用组件与弹窗（BackendSwitchModal / BookGroupManagerModal / ChapterCatalogModalDrawer 等）
-│  │  ├─ components/ui/    # Shadcn Vue 组件库（Button / Input / Dialog / Select / Slider / Tabs / Badge / Alert / Card / Skeleton / Sonner / Separator）
-│  │  ├─ layouts/          # 应用布局
-│  │  ├─ pages/            # 登录、书架、详情、阅读、规则管理页面
-│  │  ├─ router/           # 路由与鉴权守卫
-│  │  ├─ stores/           # Pinia 状态（auth / app-theme / preferences / booksCache）
-│  │  ├─ styles/           # 全局样式（含 CSS 变量主题系统）
-│  │  ├─ types/            # 前后端类型定义
-│  │  ├─ utils/            # token、格式化、通知、后端切换等工具
-│  │  └─ main.ts           # 前端入口
-│  ├─ Dockerfile
-│  ├─ nginx.conf
-│  ├─ package.json
-│  ├─ vite.config.ts       # Vite + PWA 配置
-│  └─ README.md
-├─ docs/
-│  └─ IMPLEMENTATION_STEPS.md
-├─ docker-compose.yml
-├─ .env.example
-├─ UPDATE.md
-└─ README.md
+├── backend/
+│   ├── app/
+│   │   ├── core/          # 配置、数据库、鉴权、异常和 CORS
+│   │   ├── models/        # SQLAlchemy 模型
+│   │   ├── routers/       # REST API
+│   │   ├── schemas/       # Pydantic 请求/响应模型
+│   │   ├── services/      # 书籍、章节、规则、进度、偏好业务
+│   │   ├── utils/         # 编码、文件、正则、响应工具
+│   │   ├── init_data.py   # 建库、兼容迁移和种子数据
+│   │   └── main.py        # FastAPI 入口
+│   ├── scripts/           # 管理员维护脚本
+│   ├── tests/             # 后端测试
+│   ├── data/              # 运行期 SQLite 数据（Git 忽略）
+│   └── uploads/           # 运行期书籍与封面（Git 忽略）
+├── frontend/
+│   ├── public/            # PWA 图标
+│   ├── scripts/           # 阅读页静态回归脚本
+│   └── src/
+│       ├── api/           # API 客户端
+│       ├── components/    # 业务组件与 UI 基础组件
+│       ├── layouts/       # 应用布局
+│       ├── pages/         # 登录、书架、详情、阅读、规则页
+│       ├── router/        # 路由和鉴权守卫
+│       ├── stores/        # Pinia 状态
+│       ├── styles/        # 全局主题样式
+│       ├── types/         # TypeScript API 类型
+│       └── utils/         # 后端切换、token、通知等工具
+├── docs/IMPLEMENTATION_STEPS.md
+├── docker-compose.yml
+├── UPDATE.md
+└── README.md
 ```
-
-## 功能说明
-
-### 1. 登录与认证
-
-- 后端提供 `POST /api/auth/login`、`GET /api/auth/me` 和 `POST /api/auth/change-password`
-- 前端登录态由 Pinia 管理，并把 token 保存在浏览器 `localStorage`
-- 刷新页面后会自动恢复登录态
-- 未登录状态下访问业务页会被路由守卫重定向到登录页
-- 右上角用户名区域支持下拉菜单：更改密码 / 退出登录
-- 更改密码需验证旧密码，成功后自动退出并跳转登录页
-
-### 2. 书架
-
-- 展示当前用户书籍列表
-- 支持按书名搜索
-- 支持上传 TXT
-- 支持删除书籍
-- 支持显示最近阅读时间和阅读百分比
-- 支持继续阅读
-- 支持为书籍分配分组
-
-书架分组是当前仓库中的真实功能，不是占位设计：
-
-- 可以创建、重命名、删除分组
-- 系统会自动维护默认分组
-- 书籍至少保留一个分组，避免出现“无分组书籍”
-
-### 3. TXT 上传与章节解析
-
-- 仅支持上传 `.txt` 文件
-- 原始文件会保存到本地磁盘
-- 后端会检测编码并尽量兼容：
-  - `UTF-8`
-  - `GBK`
-  - `UTF-16`
-- 标准化后的正文会按 UTF-8 保存
-- 上传后会立即按当前规则解析章节并写入数据库
-
-如果没有匹配到任何章节，系统不会报错中断，而是自动降级为“全文单章节模式”，保证书仍然可读。
-
-### 4. 书籍详情与目录交互
-
-当前版本中，书籍详情页的目录展示方式已经做了交互优化：
-
-- 详情页不再默认整页展开完整目录列表
-- 目录改为通过“查看目录”按钮触发弹窗 / 抽屉显示
-- 用户可以在弹层中滚动浏览目录，并直接点击章节跳转到阅读页
-- 原先用于解释目录入口的说明卡片 / 注释区域已经移除，详情页主体更简洁
-- 对于章节很多的书籍，详情页不再被长目录拉长，信息密度与可读性都更好
-
-书籍详情页仍然保留：
-
-- 书名、作者、文件信息、编码、总章节数、总字数
-- 当前使用的章节规则
-- 切换规则并重新解析整本书的入口
-
-### 5. 目录规则管理
-
-当前仓库已经实现完整的规则管理链路：
-
-- 查看内置规则和自定义规则
-- 新增、编辑、删除自定义规则
-- 设置默认规则
-- 测试规则是否能命中文本
-- 直接把某条规则应用到某本书并触发重新解析
-
-内置规则至少包含：
-
-- 中文章节规则
-- 英文章节规则
-- 卷章混合规则
-- 单章节全文模式
-
-### 6. 阅读页
-
-阅读页是目前前端里实现最完整的业务页面之一，支持：
-
-- 按章节加载正文，而不是整本书一次性返回
-- 上一章 / 下一章切换
-- 目录抽屉（点击"目录"从左侧展开）
-- 设置抽屉（点击"设置"从左侧展开）
-- 沉浸式阅读布局（正文窄栏居中）
-- PC 与移动端响应式适配
-- 左侧工具栏（桌面端固定，窄屏自动收起）
-- 右侧悬浮操作区
-- 返回书架快捷入口
-
-### 7. 阅读进度同步
-
-进度同步的真实逻辑是：
-
-- 以 `chapter_index + char_offset` 为主
-- `percent` 主要用于展示
-- 切换章节时立即保存
-- 阅读过程中按节流策略自动同步
-- 页面关闭前尝试再次保存
-
-后端在进度冲突时会优先保留 `updated_at` 更新更晚的记录。
-
-### 8. 切换后端
-
-前端支持在登录页切换后端连接模式：
-
-- **本地后端**：使用当前 Web 页面的同源 `/api` 代理，或本地环境变量中配置的地址
-- **远程后端**：填写独立的远程后端根地址（如 `https://example.com`）
-
-切换后端时会自动清空当前登录态，并跳转回登录页重新认证。Token 按后端维度隔离存储，避免本地与远程登录态串用。
-
-> **注意**：如果前端页面通过 **HTTPS** 访问，远程后端也**必须使用 HTTPS**。浏览器会阻止 HTTPS 页面向 HTTP 地址发送请求（Mixed Content 安全策略）。若你的远程后端只有 HTTP，请将前端也改为 HTTP 访问，或给远程后端配置 SSL/TLS。
-
-### 9. PWA 安装
-
-项目已完整配置 PWA，应用名称「初华的书」，支持安装到安卓 / iOS 桌面。
-
-安装方式：
-
-- **安卓 Chrome**：访问前端地址 → 点击 ⋮ → "添加到主屏幕"
-- **iOS Safari**：访问前端地址 → 分享按钮 → "添加到主屏幕"
-
-安装后打开为 `standalone` 模式，隐藏浏览器地址栏，体验接近原生 App。静态资源会自动缓存，无网络时仍可打开应用，但书架数据和章节内容仍需联网获取。
-
-> **注意**：每次前端更新后，建议 Ctrl+F5 强制刷新并在浏览器开发者工具中手动 Unregister Service Worker，否则可能加载旧版缓存。
-
-## 个性化调整
-
-### 1. 自定义章节识别规则
-
-这是项目最核心的个性化能力之一。
-
-你可以：
-
-- 自定义正则表达式
-- 自定义 flags，例如 `MULTILINE`、`IGNORECASE`
-- 在规则管理页直接测试真实匹配结果
-- 将规则设为默认规则
-- 将规则应用到某一本书并立即重解析
-
-这意味着不同来源、不同排版风格的 TXT 小说，都可以根据自己的标题格式定制解析逻辑。
-
-### 2. 阅读偏好
-
-阅读页当前支持以下个性化设置：
-
-- 字体大小
-- 行高
-- 字间距
-- 段间距
-- 阅读宽度
-- 浅色 / 深色主题
-
-这些设置现在会同步保存到后端用户偏好中：
-
-- 登录后优先读取账号已保存的阅读设置
-- 如果服务端还没有旧用户偏好，会兼容导入浏览器里已有的旧 `localStorage` 阅读设置
-- 同一账号在不同设备登录后，会恢复相同的阅读展示设置
-
-作为兼容兜底，前端仍会保留本地缓存，但账号级服务端偏好已经成为主数据源。
-
-### 3. 书架整理方式
-
-除了阅读设置，项目还支持按分组整理书架：
-
-- 自定义分组名称
-- 为同一本书分配多个分组
-- 在书架页按分组筛选
-
-当前版本还会同步书架页的个人浏览状态：
-
-- 排序方式
-- 搜索条件
-- 当前分组
-- 为后续分页能力预留的页码 / pageSize 偏好字段
-
-因此从书籍详情页或阅读页返回书架后，书架不会再回到默认排序或清空筛选条件；同一账号换设备后，也会恢复上次保存的书架筛选状态。
-
-这更偏向“书架组织方式”的个性化，而不是阅读器样式个性化。
 
 ## 常见问题
 
-### 1. 登录时提示"无法链接到后端"
+### 上传后只有“全文”一章
 
-如果你通过域名或反向代理访问时遇到此问题，大概率是 **CORS 跨域**导致。
+当前规则没有匹配到章节标题。到“目录规则”页用真实书籍测试正则，或在详情页选择其他规则查看预览，再执行重新解析。
 
-本项目后端已配置 `ReflectCORSMiddleware`（原生 ASGI 中间件），会自动反射浏览器请求的 `Origin` 头，因此正常情况下不需要手动维护 CORS 白名单。
+### 修改 `.env` 后账号仍未变化
 
-但如果仍有问题，请检查：
+默认管理员只在目标用户名不存在时创建。已有账号请使用页面内“更改密码”或 `scripts/manage_admin_user.py`；不要通过删除数据库处理生产数据。
 
-- `.env` 中的 `CORS_ORIGINS` 是否包含你的访问地址
-- 反向代理（如 OpenResty / Nginx）是否正确透传了 `Origin` 请求头
-- 后端容器是否已重启以加载最新配置
+### Docker 中访问不了 `/docs`
 
-### 2. 启动后无法访问前端或后端
+Compose 当前固定 `DEBUG=false`，这是预期行为。按本文 Docker 章节调整 Compose 并重建后端后才能开放文档。
 
-先检查容器是否正常运行：
+### 修改 `BACKEND_PORT` 或 `FRONTEND_PORT` 没有效果
 
-```bash
-docker compose ps
-docker compose logs -f backend
-docker compose logs -f frontend
-```
+当前 Compose 使用固定端口映射，需直接修改 [docker-compose.yml](./docker-compose.yml) 的 `ports`。
 
-默认访问地址是：
+### 封面显示失败
 
-- 前端：`http://localhost:7234`
-- 后端：`http://localhost:8234`
+确认反向代理同时转发 `/media/covers/`。封面接口只接受 JPG、JPEG、PNG 和 WebP。
 
-如果你修改了端口，请确认 `.env` 中的：
+### 分组无法删除
 
-- `BACKEND_PORT`
-- `FRONTEND_PORT`
-- `VITE_API_BASE_URL`
-- `CORS_ORIGINS`
+如果删除会让某些书失去最后一个分组，后端会返回冲突错误。先把这些书加入其他分组，再删除目标分组。
 
-是一致的。
+## 相关文档
 
-### 3. 为什么修改了默认账号密码，登录还是旧账号？
+- [更新日志](./UPDATE.md)
+- [后端快速启动](./backend/README.md)
+- [前端开发说明](./frontend/README.md)
+- [前端 UI 迁移记录](./frontend/MIGRATION.md)
+- [实施步骤](./docs/IMPLEMENTATION_STEPS.md)
+- [开发过程](./development-process.md)
 
-因为默认账号只在“数据库里还没有这个用户”时写入一次。
-
-如果 `backend/data/app.db` 已经存在并且管理员已创建，修改 `.env` 不会自动覆盖旧账号。
-
-### 4. 上传 TXT 后没有识别出目录怎么办？
-
-这是预期内可恢复的情况。
-
-系统会自动降级为“全文”单章节模式，保证可以继续阅读。之后你可以：
-
-- 到“目录规则”页测试现有规则
-- 新建自定义规则
-- 回到书籍详情页重新解析目录
-
-### 5. 为什么某些 TXT 会提示编码不支持？
-
-当前真实实现主要支持：
-
-- UTF-8
-- GBK
-- UTF-16
-
-如果文件使用了其他编码，后端会直接返回友好错误，而不会错误入库。
-
-### 6. 为什么分组删不掉？
-
-如果某个分组下有书籍只属于这一个分组，后端会阻止删除，避免书籍变成“完全没有分组”的状态。
-
-### 7. 阅读设置会不会跨设备同步？
-
-会。
-
-当前仓库里：
-
-- 阅读进度会同步到后端
-- 阅读样式偏好会同步到后端用户偏好
-- 书架排序、搜索条件、当前分组等状态也会同步到后端用户偏好
-
-所以换设备后，阅读位置可以恢复，字体大小、行高、字间距、段间距、阅读宽度、主题，以及书架筛选状态也会自动恢复。
-
-### 8. 为什么 `DEBUG=false` 时访问不了 `/docs`？
-
-这是当前版本的预期行为。
-
-为了避免在非调试环境继续暴露接口文档入口，以下端点会在 `DEBUG=false` 时自动关闭：
-
-- `/docs`
-- `/redoc`
-- `/openapi.json`
-
-如果你是在本地开发、联调或排错，需要重新打开接口文档，可以把项目根目录 `.env` 中的 `DEBUG` 改成 `true`，然后重启后端服务。
-
-### 9. 为什么前端默认端口改成了 `7234`？
-
-这是一次真实部署后的兼容性调整。
-
-在当前部署环境里，`8000`、`24412` 和 `14412` 已被其他服务占用，因此项目默认改用 `8234` 作为后端宿主机端口、`7234` 作为前端宿主机端口。前端容器内部仍然由 Nginx 监听 `80`，后端容器内部仍然由 Uvicorn 监听 `8000`，只是对外映射改成了当前机器可直接使用的端口组合。
-
-因为前端已经通过同源 `/api` 代理到后端，所以实际对外优先只需要开放前端端口 `7234`；后端 `8234` 更适合保留给本机调试、内网或受控环境使用。
-
-### 10. 为什么切换远程后端后提示"无法连接到后端服务"？
-
-最常见的原因是 **Mixed Content（混合内容）** 阻塞。
-
-如果前端页面通过 `https://` 加载（如配置了 HTTPS 域名或反向代理），而填写的远程后端地址是 `http://`，浏览器会直接阻止该请求，前端会收到"无法连接到后端服务"的错误。
-
-**解决方法**：
-
-1. **推荐**：给远程后端配置 HTTPS（如使用 Nginx / Caddy 反向代理 + Let's Encrypt 证书）
-2. **替代**：将前端访问方式也改为 HTTP（取消 HTTPS 强制重定向）
-
-### 11. PWA 安装后为什么没有网络也能打开，但看不到书架内容？
-
-这是 PWA 的正常行为。
-
-Service Worker 只会缓存**静态资源**（JS、CSS、字体、图标），不会缓存 API 响应数据：
-
-- ✅ 无网络时可以打开应用（静态资源已缓存）
-- ❌ 无网络时无法获取书架列表、章节内容、阅读进度（这些来自后端 API）
-
-如果你有离线阅读需求，需要在有网络时先浏览对应书籍，让浏览器缓存章节内容；或者后续可以考虑增加"离线章节缓存"功能。
-
-## 后续扩展建议
-
-结合当前真实仓库结构，比较自然的下一步扩展方向有：
-
-### 1. 增加前端自动化测试
-
-目前后端测试已经比较完整，前端更偏真实页面实现和手动联调。可以考虑补充：
-
-- 关键页面的组件测试
-- 登录、上传、阅读链路的端到端测试
-- Docker 部署后的 smoke test
-
-### 2. 增强阅读器能力
-
-当前阅读器已具备核心能力，但还可以继续扩展：
-
-- 更多主题方案
-- 段落间距和页边距设置
-- 目录搜索
-- 阅读统计
-- 书签 / 批注
-
-### 3. 增加数据备份与迁移能力
-
-项目当前使用 SQLite 和本地上传目录，很适合做个人数据备份。后续可以考虑：
-
-- 导出数据库与上传文件
-- 导入备份
-- 迁移到新机器
-
-### 4. 明确依赖版本与交付边界
-
-当前仓库已有 Docker 化部署能力，但还可以进一步增强可维护性：
-
-- 增加更严格的依赖锁定策略
-- 增加发布说明
-- 增加升级与数据兼容说明
-
-### 5. Service Worker 缓存策略优化
-
-当前 PWA 的 Service Worker 在每次前端更新后可能需要手动清除缓存。后续可以考虑：
-
-- 增加版本号自动比对与强制刷新提示
-- 优化缓存清理策略，减少用户手动操作
-
-## 补充说明
-
-- 后端还有单独的快速说明文档：[`backend/README.md`](./backend/README.md)
-- 前端还有单独的说明文档：[`frontend/README.md`](./frontend/README.md)
-- 开发过程文档在：[`docs/IMPLEMENTATION_STEPS.md`](./docs/IMPLEMENTATION_STEPS.md)
-- 当前版本更新说明见：[`UPDATE.md`](./UPDATE.md)
+本项目定位为轻量个人阅读器：保持单体后端、SQLite 和本地文件存储，不引入 Redis、消息队列、微服务或 Kubernetes。
