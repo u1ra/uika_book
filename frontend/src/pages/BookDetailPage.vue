@@ -210,9 +210,49 @@
                     :disabled="reparsePending || !selectedRuleId"
                     @click="handleReparse"
                   >
-                    重新解析目录
+                    {{ reparsePending ? "解析中..." : "重新解析目录" }}
                   </Button>
                 </div>
+
+                <section v-if="selectedRule" class="detail-rule-preview" aria-live="polite">
+                  <div class="detail-rule-preview__header">
+                    <div>
+                      <span>应用后预览</span>
+                      <strong>{{ selectedRule.rule_name }}</strong>
+                    </div>
+                    <Badge v-if="rulePreview" variant="secondary">
+                      共 {{ formatNumber(rulePreview.totalChapters) }} 章
+                    </Badge>
+                  </div>
+
+                  <p class="detail-rule-preview__description">
+                    {{ selectedRule.description || "该规则暂无说明。" }}
+                  </p>
+
+                  <div v-if="rulePreviewPending" class="detail-rule-preview__loading">
+                    <Skeleton v-for="index in 4" :key="index" class="h-10 w-full rounded-xl" />
+                  </div>
+
+                  <Alert v-else-if="rulePreviewError" variant="destructive" class="detail-rule-card__alert">
+                    {{ rulePreviewError }}
+                  </Alert>
+
+                  <template v-else-if="rulePreview">
+                    <Alert v-if="rulePreview.usedFallback" variant="warning" class="detail-rule-card__alert">
+                      该规则没有匹配到章节标题，应用后将按“全文”单章节模式展示。
+                    </Alert>
+                    <ol class="detail-rule-preview__list">
+                      <li v-for="(title, index) in rulePreview.titles" :key="`${index}-${title}`">
+                        <span>{{ formatNumber(index + 1) }}</span>
+                        <strong>{{ title }}</strong>
+                      </li>
+                    </ol>
+                    <p class="detail-rule-preview__note">
+                      当前展示前 {{ Math.min(rulePreview.totalChapters, 10) }} 章，共匹配
+                      {{ formatNumber(rulePreview.totalChapters) }} 章。
+                    </p>
+                  </template>
+                </section>
               </div>
             </div>
           </div>
@@ -300,6 +340,29 @@
           </div>
         </DialogContent>
       </Dialog>
+
+      <!-- Reparse result dialog -->
+      <Dialog :open="reparseDialog.open" @update:open="reparseDialog.open = $event">
+        <DialogContent class="reparse-result-dialog w-[calc(100%-2rem)] max-w-md">
+          <div
+            class="reparse-result-dialog__icon"
+            :class="`reparse-result-dialog__icon--${reparseDialog.variant}`"
+            aria-hidden="true"
+          >
+            <CircleCheck v-if="reparseDialog.variant === 'success'" :size="30" />
+            <TriangleAlert v-else :size="30" />
+          </div>
+          <DialogHeader class="reparse-result-dialog__header">
+            <DialogTitle>{{ reparseDialog.title }}</DialogTitle>
+            <DialogDescription class="reparse-result-dialog__description">
+              {{ reparseDialog.message }}
+            </DialogDescription>
+          </DialogHeader>
+          <Button class="reparse-result-dialog__confirm" @click="reparseDialog.open = false">
+            确定
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   </div>
 </template>
@@ -310,6 +373,9 @@ import { useRouter } from "vue-router";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -323,6 +389,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CircleCheck, TriangleAlert } from "lucide-vue-next";
 import { notify } from "@/utils/notify";
 
 import { booksApi } from "../api/books";
@@ -360,12 +427,39 @@ const catalogVisible = ref(false);
 const editableTitle = ref("");
 const editableAuthor = ref("");
 const editableDescription = ref("");
+const rulePreviewPending = ref(false);
+const rulePreviewError = ref<string | null>(null);
+const rulePreview = ref<RulePreview | null>(null);
+let rulePreviewRequestId = 0;
+
+interface RulePreview {
+  totalChapters: number;
+  titles: string[];
+  usedFallback: boolean;
+}
+
+const reparseDialog = ref<{
+  open: boolean;
+  variant: "success" | "error";
+  title: string;
+  message: string;
+}>({
+  open: false,
+  variant: "success",
+  title: "",
+  message: "",
+});
 
 const ruleOptions = computed(() => {
   return rules.value.map((rule) => ({
     label: rule.is_builtin ? `${rule.rule_name}（内置）` : rule.rule_name,
     value: rule.id,
   }));
+});
+
+const selectedRule = computed(() => {
+  const ruleId = Number(selectedRuleId.value);
+  return rules.value.find((rule) => rule.id === ruleId) ?? null;
 });
 
 const currentRuleName = computed(() => {
@@ -586,20 +680,99 @@ async function handleRemoveCover() {
 
 async function handleReparse() {
   if (!selectedRuleId.value) {
-    notify.info("请先选择一个目录规则");
+    showReparseDialog("error", "无法应用目录规则", "请先选择一个目录规则。");
     return;
   }
   reparsePending.value = true;
   try {
-    await booksApi.reparse(props.bookId, selectedRuleId.value);
-    notify.success("目录已重新解析");
+    const result = await booksApi.reparse(props.bookId, Number(selectedRuleId.value));
     await loadBookAndChapters();
+    showReparseDialog(
+      "success",
+      "目录规则应用成功",
+      `已应用“${selectedRule.value?.rule_name || "所选规则"}”，共解析出 ${formatNumber(result.total_chapters)} 个章节。`,
+    );
   } catch (error) {
-    notify.error(getErrorMessage(error));
+    showReparseDialog("error", "目录规则应用失败", getErrorMessage(error));
   } finally {
     reparsePending.value = false;
   }
 }
+
+function showReparseDialog(variant: "success" | "error", title: string, message: string) {
+  reparseDialog.value = {
+    open: true,
+    variant,
+    title,
+    message,
+  };
+}
+
+function isFullTextRule(rule: ChapterRule) {
+  const flags = rule.flags.split(/[|,\s]+/).map((flag) => flag.toUpperCase());
+  return rule.regex_pattern === "__FULL_TEXT__" || flags.includes("FULL_TEXT");
+}
+
+async function loadRulePreview(rule: ChapterRule | null) {
+  const requestId = ++rulePreviewRequestId;
+  rulePreview.value = null;
+  rulePreviewError.value = null;
+
+  if (!rule) {
+    rulePreviewPending.value = false;
+    return;
+  }
+
+  if (isFullTextRule(rule)) {
+    rulePreviewPending.value = false;
+    rulePreview.value = {
+      totalChapters: 1,
+      titles: ["全文"],
+      usedFallback: false,
+    };
+    return;
+  }
+
+  rulePreviewPending.value = true;
+  try {
+    const result = await chapterRulesApi.test({
+      book_id: props.bookId,
+      regex_pattern: rule.regex_pattern,
+      flags: rule.flags,
+    });
+    if (requestId !== rulePreviewRequestId) return;
+
+    if (result.count === 0) {
+      rulePreview.value = {
+        totalChapters: 1,
+        titles: ["全文"],
+        usedFallback: true,
+      };
+      return;
+    }
+
+    rulePreview.value = {
+      totalChapters: result.count,
+      titles: result.items.slice(0, 10).map((item) => item.text.trim() || "未命名章节"),
+      usedFallback: false,
+    };
+  } catch (error) {
+    if (requestId !== rulePreviewRequestId) return;
+    rulePreviewError.value = `目录预览失败：${getErrorMessage(error)}`;
+  } finally {
+    if (requestId === rulePreviewRequestId) {
+      rulePreviewPending.value = false;
+    }
+  }
+}
+
+watch(
+  selectedRule,
+  (rule) => {
+    void loadRulePreview(rule);
+  },
+  { immediate: true },
+);
 
 watch(
   () => props.bookId,
@@ -899,6 +1072,137 @@ watch(
   gap: 12px;
 }
 
+.detail-rule-preview {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: 20px;
+  background: var(--surface-soft);
+}
+
+.detail-rule-preview__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.detail-rule-preview__header > div {
+  min-width: 0;
+}
+
+.detail-rule-preview__header span,
+.detail-rule-preview__description,
+.detail-rule-preview__note {
+  color: var(--text-secondary);
+}
+
+.detail-rule-preview__header span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.detail-rule-preview__header strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-rule-preview__description,
+.detail-rule-preview__note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.detail-rule-preview__loading {
+  display: grid;
+  gap: 8px;
+}
+
+.detail-rule-preview__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detail-rule-preview__list li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--surface-panel-bg);
+}
+
+.detail-rule-preview__list li > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-color);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.detail-rule-preview__list li > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reparse-result-dialog {
+  justify-items: center;
+  border-radius: 24px;
+  color: var(--text-primary);
+  text-align: center;
+  box-shadow: var(--shadow-modal);
+}
+
+.reparse-result-dialog__icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+}
+
+.reparse-result-dialog__icon--success {
+  background: var(--alert-success-bg);
+  color: var(--alert-success-text);
+}
+
+.reparse-result-dialog__icon--error {
+  background: var(--alert-destructive-bg);
+  color: var(--alert-destructive-text);
+}
+
+.reparse-result-dialog__header {
+  text-align: center;
+}
+
+.reparse-result-dialog__description {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.reparse-result-dialog__confirm {
+  width: 100%;
+  margin-top: 4px;
+}
+
 /* Metadata modal */
 .metadata-modal {
   border-radius: 24px;
@@ -1051,6 +1355,20 @@ watch(
   .detail-card__header,
   .detail-card__body {
     padding: 16px 20px;
+  }
+
+  .detail-rule-preview {
+    padding: 14px;
+  }
+
+  .detail-rule-preview__header {
+    align-items: flex-start;
+  }
+
+  .reparse-result-dialog {
+    max-height: calc(100dvh - 32px);
+    padding: 20px;
+    overflow-y: auto;
   }
 }
 </style>
