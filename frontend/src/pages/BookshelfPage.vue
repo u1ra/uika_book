@@ -477,8 +477,13 @@ async function handleContinue(book: BookShelfItem) {
   }
 }
 
-function confirmDelete(book: BookShelfItem) {
-  if (confirm(`删除后将同时移除本地书籍文件，确认删除「${book.title}」吗？`)) {
+async function confirmDelete(book: BookShelfItem) {
+  const confirmed = await notify.confirm(`删除后将同时移除本地书籍文件，确认删除「${book.title}」吗？`, {
+    title: "删除书籍",
+    confirmLabel: "确认删除",
+    destructive: true,
+  });
+  if (confirmed) {
     void handleDelete(book);
   }
 }

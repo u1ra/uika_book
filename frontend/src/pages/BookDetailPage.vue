@@ -341,28 +341,6 @@
         </DialogContent>
       </Dialog>
 
-      <!-- Reparse result dialog -->
-      <Dialog :open="reparseDialog.open" @update:open="reparseDialog.open = $event">
-        <DialogContent class="reparse-result-dialog w-[calc(100%-2rem)] max-w-md">
-          <div
-            class="reparse-result-dialog__icon"
-            :class="`reparse-result-dialog__icon--${reparseDialog.variant}`"
-            aria-hidden="true"
-          >
-            <CircleCheck v-if="reparseDialog.variant === 'success'" :size="30" />
-            <TriangleAlert v-else :size="30" />
-          </div>
-          <DialogHeader class="reparse-result-dialog__header">
-            <DialogTitle>{{ reparseDialog.title }}</DialogTitle>
-            <DialogDescription class="reparse-result-dialog__description">
-              {{ reparseDialog.message }}
-            </DialogDescription>
-          </DialogHeader>
-          <Button class="reparse-result-dialog__confirm" @click="reparseDialog.open = false">
-            确定
-          </Button>
-        </DialogContent>
-      </Dialog>
     </div>
   </div>
 </template>
@@ -373,9 +351,6 @@ import { useRouter } from "vue-router";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -389,7 +364,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CircleCheck, TriangleAlert } from "lucide-vue-next";
 import { notify } from "@/utils/notify";
 
 import { booksApi } from "../api/books";
@@ -437,18 +411,6 @@ interface RulePreview {
   titles: string[];
   usedFallback: boolean;
 }
-
-const reparseDialog = ref<{
-  open: boolean;
-  variant: "success" | "error";
-  title: string;
-  message: string;
-}>({
-  open: false,
-  variant: "success",
-  title: "",
-  message: "",
-});
 
 const ruleOptions = computed(() => {
   return rules.value.map((rule) => ({
@@ -680,32 +642,22 @@ async function handleRemoveCover() {
 
 async function handleReparse() {
   if (!selectedRuleId.value) {
-    showReparseDialog("error", "无法应用目录规则", "请先选择一个目录规则。");
+    notify.error("请先选择一个目录规则。", { title: "无法应用目录规则" });
     return;
   }
   reparsePending.value = true;
   try {
     const result = await booksApi.reparse(props.bookId, Number(selectedRuleId.value));
     await loadBookAndChapters();
-    showReparseDialog(
-      "success",
-      "目录规则应用成功",
+    notify.success(
       `已应用“${selectedRule.value?.rule_name || "所选规则"}”，共解析出 ${formatNumber(result.total_chapters)} 个章节。`,
+      { title: "目录规则应用成功" },
     );
   } catch (error) {
-    showReparseDialog("error", "目录规则应用失败", getErrorMessage(error));
+    notify.error(getErrorMessage(error), { title: "目录规则应用失败" });
   } finally {
     reparsePending.value = false;
   }
-}
-
-function showReparseDialog(variant: "success" | "error", title: string, message: string) {
-  reparseDialog.value = {
-    open: true,
-    variant,
-    title,
-    message,
-  };
 }
 
 function isFullTextRule(rule: ChapterRule) {
@@ -1163,46 +1115,6 @@ watch(
   white-space: nowrap;
 }
 
-.reparse-result-dialog {
-  justify-items: center;
-  border-radius: 24px;
-  color: var(--text-primary);
-  text-align: center;
-  box-shadow: var(--shadow-modal);
-}
-
-.reparse-result-dialog__icon {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 999px;
-}
-
-.reparse-result-dialog__icon--success {
-  background: var(--alert-success-bg);
-  color: var(--alert-success-text);
-}
-
-.reparse-result-dialog__icon--error {
-  background: var(--alert-destructive-bg);
-  color: var(--alert-destructive-text);
-}
-
-.reparse-result-dialog__header {
-  text-align: center;
-}
-
-.reparse-result-dialog__description {
-  color: var(--text-secondary);
-  line-height: 1.7;
-}
-
-.reparse-result-dialog__confirm {
-  width: 100%;
-  margin-top: 4px;
-}
-
 /* Metadata modal */
 .metadata-modal {
   border-radius: 24px;
@@ -1365,10 +1277,5 @@ watch(
     align-items: flex-start;
   }
 
-  .reparse-result-dialog {
-    max-height: calc(100dvh - 32px);
-    padding: 20px;
-    overflow-y: auto;
-  }
 }
 </style>
