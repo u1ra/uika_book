@@ -1,10 +1,10 @@
 <template>
   <div class="app-provider">
     <slot />
-    <Sonner />
+    <AppNotificationDialog />
   </div>
 </template>
 
 <script setup lang="ts">
-import { Sonner } from "@/components/ui/sonner";
+import AppNotificationDialog from "@/components/AppNotificationDialog.vue";
 </script>

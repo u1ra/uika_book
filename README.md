@@ -76,7 +76,7 @@
 先克隆仓库并进入项目目录：
 
 ```bash
-git clone https://github.com/contersion/uika_book.git
+git clone https://github.com/u1ra/uika_book.git
 cd uika_book
 ```
 
