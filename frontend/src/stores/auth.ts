@@ -3,11 +3,9 @@ import { defineStore } from "pinia";
 import { authApi } from "../api/auth";
 import { ApiError, getErrorMessage } from "../api/client";
 import type { LoginPayload, User } from "../types/api";
-import { getActiveBackendId } from "../utils/backend";
 import { authTokenStorage } from "../utils/token";
 
 interface AuthState {
-  backendId: string;
   token: string | null;
   user: User | null;
   initialized: boolean;
@@ -18,11 +16,8 @@ interface AuthState {
 }
 
 function createAuthState(): AuthState {
-  const backendId = getActiveBackendId();
-
   return {
-    backendId,
-    token: authTokenStorage.get(backendId),
+    token: authTokenStorage.get(),
     user: null,
     initialized: false,
     restorePending: false,
@@ -40,27 +35,7 @@ export const useAuthStore = defineStore("auth", {
     isRestoringSession: (state) => state.restorePending,
   },
   actions: {
-    syncBackendContext(options: { useStoredToken?: boolean } = {}) {
-      const activeBackendId = getActiveBackendId();
-
-      if (this.backendId === activeBackendId) {
-        return false;
-      }
-
-      this.backendId = activeBackendId;
-      this.token = options.useStoredToken === false ? null : authTokenStorage.get(activeBackendId);
-      this.user = null;
-      this.initialized = false;
-      this.restorePending = false;
-      this.loginPending = false;
-      this.errorMessage = null;
-      this.bootstrapPromise = null;
-
-      return true;
-    },
     async ensureReady() {
-      this.syncBackendContext();
-
       if (this.initialized) {
         return;
       }
@@ -74,8 +49,6 @@ export const useAuthStore = defineStore("auth", {
       await this.bootstrapPromise;
     },
     async bootstrap() {
-      this.syncBackendContext();
-
       if (!this.token) {
         this.initialized = true;
         this.restorePending = false;
@@ -100,7 +73,6 @@ export const useAuthStore = defineStore("auth", {
       }
     },
     async login(payload: LoginPayload) {
-      this.syncBackendContext({ useStoredToken: false });
       this.loginPending = true;
       this.errorMessage = null;
 
@@ -124,34 +96,19 @@ export const useAuthStore = defineStore("auth", {
       this.loginPending = false;
       this.errorMessage = null;
     },
-    handleBackendSwitch(nextBackendId = getActiveBackendId()) {
-      this.backendId = nextBackendId;
-      this.token = null;
-      this.user = null;
-      this.initialized = false;
-      this.restorePending = false;
-      this.loginPending = false;
-      this.errorMessage = null;
-      this.bootstrapPromise = null;
-    },
     setError(message: string | null) {
       this.errorMessage = message;
     },
     setToken(token: string) {
-      const activeBackendId = getActiveBackendId();
-
-      this.backendId = activeBackendId;
       this.token = token;
-      authTokenStorage.set(token, activeBackendId);
+      authTokenStorage.set(token);
     },
     clearAuth(options: { clearStorage?: boolean } = {}) {
-      const backendId = this.backendId || getActiveBackendId();
-
       this.token = null;
       this.user = null;
 
       if (options.clearStorage !== false) {
-        authTokenStorage.clear(backendId);
+        authTokenStorage.clear();
       }
     },
   },

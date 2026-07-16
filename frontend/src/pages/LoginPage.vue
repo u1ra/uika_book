@@ -4,35 +4,35 @@
       <div>
         <div class="login-page__intro">
           <div class="login-page__eyebrow">初华的书</div>
-          <h1 class="login-page__title">继续你的阅读，而不是重新找回进度</h1>
+          <h1 class="login-page__title">
+            <span>把喜欢的故事，</span>
+            <span>留在自己的书架里。</span>
+          </h1>
           <p class="login-page__description">
-            登录成功后会自动进入书架；如果你是从业务页被拦截回来的，系统会在认证成功后自动带你回到原来的页面。
+            上传 TXT，整理章节，安静地读下去。阅读位置会自动保存，下次打开时可以接着上次停下的地方继续。
           </p>
 
-          <div class="flex flex-col gap-3">
-            <Alert variant="info">
-              当前后端：<strong>{{ activeBackendSummary }}</strong>
-            </Alert>
-            <Alert variant="warning">
-              默认账号取决于当前后端的初始化配置，请以目标后端的实际账号为准。
-            </Alert>
-            <Alert variant="success">
-              已启用登录态恢复与路由守卫，刷新后会自动尝试恢复会话。
-            </Alert>
-          </div>
-
-          <div class="login-page__feature-list" aria-label="登录后可用能力">
+          <div class="login-page__feature-list" aria-label="阅读器主要功能">
             <div class="login-page__feature-item">
               <span class="login-page__feature-dot" />
-              进入书架、书籍详情、阅读页与规则管理页
+              <div>
+                <strong>TXT 私人书架</strong>
+                <span>上传、整理和查找自己的本地书籍</span>
+              </div>
             </div>
             <div class="login-page__feature-item">
               <span class="login-page__feature-dot" />
-              使用 token 持久化登录状态
+              <div>
+                <strong>章节目录</strong>
+                <span>自动识别章节，也支持自定义目录规则</span>
+              </div>
             </div>
             <div class="login-page__feature-item">
               <span class="login-page__feature-dot" />
-              登录失败时显示后端真实错误提示
+              <div>
+                <strong>阅读进度</strong>
+                <span>按章节和阅读位置保存，下次打开继续阅读</span>
+              </div>
             </div>
           </div>
         </div>
@@ -41,21 +41,11 @@
       <div>
         <Card class="login-page__card">
           <CardContent class="flex flex-col gap-4 pt-6">
-            <div class="login-page__form-head">
-              <div>
-                <h2 class="login-page__form-title">登录</h2>
-                <p class="login-page__form-subtitle">
-                  {{ redirectHint }}
-                </p>
-              </div>
-
-              <Button variant="outline" size="sm" @click="backendModalVisible = true">
-                切换后端
-              </Button>
-            </div>
-
-            <div class="login-page__backend-summary">
-              当前连接：{{ activeBackendSummary }}
+            <div>
+              <h2 class="login-page__form-title">登录</h2>
+              <p class="login-page__form-subtitle">
+                {{ redirectHint }}
+              </p>
             </div>
 
             <Alert v-if="authStore.errorMessage" variant="destructive">
@@ -103,12 +93,11 @@
       </div>
     </div>
 
-    <backend-switch-modal v-model:show="backendModalVisible" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import { Button } from "@/components/ui/button";
@@ -116,53 +105,29 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { notify } from "@/utils/notify";
-import BackendSwitchModal from "../components/BackendSwitchModal.vue";
 import { useAuthStore } from "../stores/auth";
-import { consumeBackendNotice, getBackendDisplaySummary } from "../utils/backend";
 
 const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
-const backendModalVisible = ref(false);
 
 const form = reactive({
   username: "",
   password: "",
 });
 
-const activeBackendSummary = computed(() => getBackendDisplaySummary());
-
 const redirectHint = computed(() => {
   if (typeof route.query.redirect === "string" && route.query.redirect !== "/books") {
     return "登录成功后会自动回到你刚才尝试访问的页面。";
   }
 
-  return "输入账号后即可进入书架，继续后续业务操作。";
+  return "输入账号即可进入书架，继续阅读。";
 });
 
 function clearError() {
   if (authStore.errorMessage) {
     authStore.setError(null);
   }
-}
-
-function showBackendNotice() {
-  const notice = consumeBackendNotice();
-  if (!notice) {
-    return;
-  }
-
-  if (notice.type === "error") {
-    notify.error(notice.text);
-    return;
-  }
-
-  if (notice.type === "info") {
-    notify.info(notice.text);
-    return;
-  }
-
-  notify.success(notice.text);
 }
 
 async function handleLogin() {
@@ -186,9 +151,6 @@ async function handleLogin() {
   } catch {}
 }
 
-onMounted(() => {
-  showBackendNotice();
-});
 </script>
 
 <style scoped>
@@ -234,8 +196,15 @@ onMounted(() => {
 .login-page__title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(34px, 5vw, 54px);
-  line-height: 1.05;
+  font-size: clamp(36px, 4.5vw, 52px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.login-page__title span {
+  display: block;
 }
 
 .login-page__description,
@@ -251,13 +220,6 @@ onMounted(() => {
   font-size: 28px;
 }
 
-.login-page__form-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: start;
-}
-
 .login-page__card {
   background: color-mix(in srgb, var(--surface-color) 94%, white 6%);
   box-shadow: var(--surface-shadow);
@@ -270,15 +232,32 @@ onMounted(() => {
 
 .login-page__feature-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   color: var(--text-secondary);
   line-height: 1.7;
 }
 
+.login-page__feature-item strong,
+.login-page__feature-item span {
+  display: block;
+}
+
+.login-page__feature-item strong {
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.login-page__feature-item div > span {
+  margin-top: 2px;
+  font-size: 13px;
+}
+
 .login-page__feature-dot {
   width: 10px;
   height: 10px;
+  margin-top: 8px;
   flex: 0 0 auto;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
@@ -295,21 +274,10 @@ onMounted(() => {
   line-height: 1.7;
 }
 
-.login-page__backend-summary {
-  color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.7;
-}
-
 @media (max-width: 1023px) {
   .login-page {
     min-height: auto;
     padding: 24px 0 40px;
-  }
-
-  .login-page__form-head {
-    flex-direction: column;
-    align-items: stretch;
   }
 }
 </style>

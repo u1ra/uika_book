@@ -116,12 +116,13 @@ src/components/ui/
 
 | 组件 | 状态 |
 |------|------|
-| `AppProvider.vue` | ✅ 注入 Sonner Toaster |
+| `AppProvider.vue` | ✅ 注入应用内通知对话框 |
 | `PagePlaceholder.vue` | ✅ 完全迁移 |
-| `BackendSwitchModal.vue` | ✅ 完全迁移 |
 | `BookGroupManagerModal.vue` | ✅ 完全迁移 |
 | `BookGroupSelectorModal.vue` | ✅ 完全迁移 |
 | `ChapterCatalogModalDrawer.vue` | ✅ 完全迁移（Dialog + 自定义 Drawer） |
+
+> `BackendSwitchModal.vue` 已在后续同源访问重构中移除，不再属于当前组件结构。
 
 ## 工具函数
 

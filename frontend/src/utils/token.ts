@@ -1,38 +1,73 @@
-import { getActiveBackendId, loadBackendConfig } from "./backend";
+const TOKEN_STORAGE_KEY = "uika_book/token";
+const DEPRECATED_BACKEND_CONFIG_KEY = "uika_book/backend-config";
+const DEPRECATED_BACKEND_NOTICE_KEY = "uika_book/backend-notice";
 
-const LEGACY_TOKEN_STORAGE_KEY = "uika_book/token";
-
-function buildScopedTokenStorageKey(backendId: string) {
-  return `${LEGACY_TOKEN_STORAGE_KEY}/${encodeURIComponent(backendId)}`;
-}
-
-function readLegacyToken(backendId: string) {
+function getPreviousSameOriginTokenKey() {
   if (typeof window === "undefined") {
     return null;
   }
 
-  const activeConfig = loadBackendConfig();
-  if (activeConfig.mode !== "local" || backendId !== getActiveBackendId()) {
+  const previousBackendId = `origin:${window.location.origin.toLowerCase()}`;
+  return `${TOKEN_STORAGE_KEY}/${encodeURIComponent(previousBackendId)}`;
+}
+
+function clearDeprecatedBackendState() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(DEPRECATED_BACKEND_CONFIG_KEY);
+  window.sessionStorage.removeItem(DEPRECATED_BACKEND_NOTICE_KEY);
+}
+
+function migratePreviousSameOriginToken() {
+  if (typeof window === "undefined") {
     return null;
   }
 
-  return window.localStorage.getItem(LEGACY_TOKEN_STORAGE_KEY);
+  const currentToken = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+  if (currentToken) {
+    clearDeprecatedBackendState();
+    return currentToken;
+  }
+
+  const previousKey = getPreviousSameOriginTokenKey();
+  const previousToken = previousKey ? window.localStorage.getItem(previousKey) : null;
+  if (previousToken && previousKey) {
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, previousToken);
+    window.localStorage.removeItem(previousKey);
+  }
+
+  clearDeprecatedBackendState();
+  return previousToken;
 }
 
 export const authTokenStorage = {
-  get(backendId = getActiveBackendId()) {
-    const scopedToken = window.localStorage.getItem(buildScopedTokenStorageKey(backendId));
-    return scopedToken || readLegacyToken(backendId);
+  get() {
+    return migratePreviousSameOriginToken();
   },
-  set(token: string, backendId = getActiveBackendId()) {
-    window.localStorage.setItem(buildScopedTokenStorageKey(backendId), token);
-    window.localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY);
+  set(token: string) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    const previousKey = getPreviousSameOriginTokenKey();
+    if (previousKey) {
+      window.localStorage.removeItem(previousKey);
+    }
+    clearDeprecatedBackendState();
   },
-  clear(backendId = getActiveBackendId()) {
-    window.localStorage.removeItem(buildScopedTokenStorageKey(backendId));
-    window.localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY);
-  },
-  clearLegacy() {
-    window.localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY);
+  clear() {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+    const previousKey = getPreviousSameOriginTokenKey();
+    if (previousKey) {
+      window.localStorage.removeItem(previousKey);
+    }
+    clearDeprecatedBackendState();
   },
 };

@@ -11,7 +11,6 @@ services:
       HOST: 0.0.0.0
       PORT: 8000
       API_V1_PREFIX: ${API_V1_PREFIX:-/api/v1}
-      CORS_ORIGINS: '${CORS_ORIGINS:-["http://localhost:7234","http://127.0.0.1:7234"]}'
       DATA_DIR: ${DATA_DIR:-/app/data}
       UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
       DATABASE_URL: ${DATABASE_URL:-}
@@ -20,8 +19,8 @@ services:
       DEFAULT_ADMIN_USERNAME: ${DEFAULT_ADMIN_USERNAME:-admin}
       DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-admin123}
       DEFAULT_TXT_ENCODING: ${DEFAULT_TXT_ENCODING:-utf-8}
-    ports:
-      - "8234:8000"
+    expose:
+      - "8000"
     volumes:
       - ./backend/data:/app/data
       - ./backend/uploads:/app/uploads
@@ -29,13 +28,10 @@ services:
   frontend:
     build:
       context: ./frontend
-      args:
-        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-}"
     container_name: uika_book-frontend
     depends_on:
       - backend
     restart: unless-stopped
     ports:
-      - "7234:80"
-
+      - "${FRONTEND_PORT:-7234}:80"
 

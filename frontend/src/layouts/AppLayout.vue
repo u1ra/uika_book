@@ -28,9 +28,6 @@
           >
             目录规则
           </Button>
-          <Button variant="secondary" size="sm" @click="backendModalVisible = true">
-            切换后端
-          </Button>
           <Button variant="secondary" size="sm" @click="handleToggleTheme">
             {{ themeToggleLabel }}
           </Button>
@@ -40,7 +37,6 @@
           <div class="app-layout__user-trigger" @click="userMenuOpen = !userMenuOpen">
             <div class="app-layout__user-meta">
               <span class="app-layout__username">{{ authStore.user?.username }}</span>
-              <span class="app-layout__backend">{{ backendSummary }}</span>
             </div>
             <svg
               class="app-layout__user-chevron"
@@ -79,8 +75,6 @@
     <main class="app-layout__content" :class="{ 'app-layout__content--immersive': isImmersiveRoute }">
       <router-view />
     </main>
-
-    <backend-switch-modal v-model:show="backendModalVisible" />
 
     <!-- Change Password Dialog -->
     <Dialog :open="passwordModalVisible" @update:open="passwordModalVisible = $event">
@@ -131,11 +125,9 @@ import { onClickOutside } from "@vueuse/core";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import BackendSwitchModal from "../components/BackendSwitchModal.vue";
 import { useAuthStore } from "../stores/auth";
 import { useAppThemeStore } from "../stores/app-theme";
 import { usePreferencesStore } from "../stores/preferences";
-import { getBackendDisplaySummary } from "../utils/backend";
 import { authApi } from "../api/auth";
 import { notify } from "../utils/notify";
 import { getErrorMessage } from "../api/client";
@@ -145,9 +137,7 @@ const appThemeStore = useAppThemeStore();
 const preferencesStore = usePreferencesStore();
 const route = useRoute();
 const router = useRouter();
-const backendModalVisible = ref(false);
 const isImmersiveRoute = computed(() => route.meta.immersive === true);
-const backendSummary = computed(() => getBackendDisplaySummary());
 const themeToggleLabel = computed(() => (appThemeStore.theme === "dark" ? "日间模式" : "夜间模式"));
 
 const userMenuOpen = ref(false);
@@ -301,8 +291,8 @@ async function handleChangePassword() {
 }
 
 .app-layout__user-meta {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  align-items: center;
 }
 
 .app-layout__user-chevron {
@@ -368,15 +358,6 @@ async function handleChangePassword() {
   overflow: hidden;
   color: var(--text-secondary);
   font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.app-layout__backend {
-  max-width: min(280px, 44vw);
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -449,10 +430,6 @@ async function handleChangePassword() {
     display: flex;
     align-items: center;
     gap: 6px;
-  }
-
-  .app-layout__backend {
-    display: none;
   }
 
   .app-layout__username {

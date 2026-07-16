@@ -2,7 +2,7 @@
 
 一个面向个人自托管场景的 TXT 在线阅读器。上传本地 TXT 后，系统会检测编码、解析章节并保存到书架；阅读时只按当前章节加载正文，并以 `chapter_index + char_offset` 同步阅读位置。
 
-当前文档版本：`v1.10`
+当前文档版本：`v1.12`
 
 更新记录：[UPDATE.md](./UPDATE.md)
 
@@ -13,10 +13,10 @@
 - 自定义章节正则、flags、规则测试、默认规则和整书重解析
 - 规则应用前预览：展示预计章节数、前 10 个标题和全文降级提示
 - 书架搜索、排序、分组、封面、元数据编辑和继续阅读
-- 按章节获取正文，支持上一章、下一章、目录快速跳转
+- 按章节获取正文，支持上一章、下一章、目录快速跳转和长目录虚拟滚动
 - 字号、行高、字间距、段间距、阅读宽度和明暗主题设置
 - 以账号为主数据源同步阅读进度、阅读偏好和书架筛选状态
-- 本地 / 远程后端切换，登录 token 按后端隔离
+- 浏览器统一通过同源 `/api` 访问后端，无需跨域配置
 - PC、移动端响应式界面和可安装的 PWA
 - 应用内统一提示及危险操作确认对话框
 
@@ -62,7 +62,7 @@ Copy-Item .env.example .env
 - `DEFAULT_ADMIN_USERNAME`
 - `DEFAULT_ADMIN_PASSWORD`
 
-`VITE_API_BASE_URL` 建议保持为空。这样浏览器会请求当前站点的同源 `/api`，由前端 Nginx 转发到后端，局域网和反向代理部署都更简单。
+浏览器始终请求当前站点的同源 `/api`，由前端 Nginx 转发到后端容器，不需要配置 API Base URL。
 
 ### 3. 构建并启动
 
@@ -75,12 +75,11 @@ docker compose up --build -d
 | 服务 | 地址 |
 | --- | --- |
 | 前端 | `http://localhost:7234` |
-| 后端 | `http://localhost:8234` |
-| 健康检查 | `http://localhost:8234/health` |
+| 健康检查 | `http://localhost:7234/health` |
 
-当前 [docker-compose.yml](./docker-compose.yml) 将宿主机端口直接写为 `7234` 和 `8234`。`.env.example` 中的 `FRONTEND_PORT`、`BACKEND_PORT` 目前不会覆盖这两个映射；如需换端口，请修改 Compose 文件的 `ports`。
+当前 [docker-compose.yml](./docker-compose.yml) 只向宿主机开放前端 Nginx。后端 `8000` 端口仅在 Compose 网络内可见，所有浏览器请求都通过前端同源转发。可在 `.env` 中修改 `FRONTEND_PORT`，默认值为 `7234`。
 
-Compose 同样把后端 `DEBUG` 固定为 `false`，所以 Docker 部署默认不开放 `/docs`、`/redoc` 和 `/openapi.json`。如需在受控环境中使用 Swagger，请先将 Compose 中的 `DEBUG` 改为 `${DEBUG:-false}` 或 `true`，再重建后端。
+Compose 把后端 `DEBUG` 固定为 `false`，默认不开放 `/docs`、`/redoc` 和 `/openapi.json`。需要 Swagger 时建议使用后文的本地开发方式启动后端。
 
 ### 4. 常用命令
 
@@ -172,7 +171,7 @@ npm install
 npm run dev
 ```
 
-Vite 开发服务器默认运行在 `http://localhost:24412`，并将 `/api`、`/health` 代理到 `http://127.0.0.1:8000`。
+Vite 开发服务器默认运行在 `http://localhost:24412`，并将 `/api`、`/media/covers`、`/health` 代理到 `http://127.0.0.1:8000`。
 
 常用前端命令：
 
@@ -189,7 +188,7 @@ cd backend
 pytest -q
 ```
 
-项目还提供两个阅读页静态回归脚本：
+项目还提供两个前端静态回归脚本，覆盖书架响应式、阅读正文布局和目录抽屉单滚动约束：
 
 ```bash
 node frontend/scripts/verify-ui-fixes.mjs
@@ -224,17 +223,19 @@ node frontend/scripts/verify-reader-page-layout.mjs
 - 页面滚动时节流同步；切章、隐藏页面、离开阅读页和关闭页面前会再次尝试保存。
 - 服务端以 `updated_at` 处理进度冲突，较旧的提交不会覆盖较新的位置。
 - 阅读偏好和书架筛选状态保存在用户的 `preferences_json` 中，浏览器本地存储仅作为兼容与恢复兜底。
+- 章节目录抽屉固定显示进度与快速跳转，长目录只在章节列表内部滚动。
 
-## 切换后端
+## 同源访问
 
-登录页和应用顶栏均可打开“切换后端”：
+前端只使用相对路径访问后端：
 
-- 本地模式：使用 `VITE_LOCAL_API_BASE_URL`、兼容的 `VITE_API_BASE_URL`，或默认同源地址。
-- 远程模式：填写完整的 `http://` 或 `https://` 后端根地址，不要附带 `/api`、查询参数或锚点。
+- `/api/`：认证、书架、章节、规则、进度与偏好接口
+- `/media/covers/`：书籍封面
+- `/health`：健康检查
 
-切换后会清除相关后端的登录态并要求重新登录。Token 按后端地址隔离，避免本地和远程会话串用。
+本地开发由 Vite proxy 转发到 `127.0.0.1:8000`；Docker 部署由前端 Nginx 转发到 `uika_book-backend:8000`。REST API 边界保持不变，前后端仍可独立开发和构建，只是不再允许浏览器运行时选择其他后端。
 
-HTTPS 页面不能调用 HTTP 后端，这是浏览器 Mixed Content 限制；此时远程后端也必须提供 HTTPS。
+从旧版本升级时，前端会把当前 Origin 对应的旧作用域 Token 自动迁移到固定存储键，并清理废弃的后端选择配置。
 
 ## PWA
 
@@ -247,7 +248,7 @@ Service Worker 只预缓存前端应用壳和本地静态资源，不缓存 API 
 
 前端更新后如果仍看到旧界面，可先强制刷新；仍未更新时，在浏览器开发者工具中注销旧 Service Worker 后重新加载。
 
-## 反向代理与 CORS
+## 反向代理
 
 前端 Nginx 已将以下路径转发到后端容器：
 
@@ -255,9 +256,9 @@ Service Worker 只预缓存前端应用壳和本地静态资源，不缓存 API 
 - `/media/covers/`
 - `/health`
 
-优先使用同源转发，只向外暴露前端服务。若前后端分属不同域名，后端的原生 `ReflectCORSMiddleware` 会反射请求中的 `Origin` 并处理预检请求；它位于标准 `CORSMiddleware` 外层。
+对公网、局域网或隧道部署时，只需把域名反向代理到前端端口。不要让浏览器直接访问后端容器，也不要把 `/api` 指向另一个 Origin。若接口返回前端 HTML 或 404，优先检查上述三个路径是否完整转发。
 
-如果通过域名或隧道访问仍出现跨域错误，优先确认反向代理是否保留 `Origin` 请求头，以及 OPTIONS 请求是否到达后端。由于反射中间件接受任意 Origin，`CORS_ORIGINS` 不是当前实现的严格访问控制边界；不要依赖它保护公网接口。
+后端不再启用 CORS 中间件；这是同源部署的预期行为，不影响 curl、服务端程序或同源 Nginx 访问 API。
 
 ## API 概览
 
@@ -295,7 +296,7 @@ Service Worker 只预缓存前端应用壳和本地静态资源，不缓存 API 
 .
 ├── backend/
 │   ├── app/
-│   │   ├── core/          # 配置、数据库、鉴权、异常和 CORS
+│   │   ├── core/          # 配置、数据库、鉴权和异常处理
 │   │   ├── models/        # SQLAlchemy 模型
 │   │   ├── routers/       # REST API
 │   │   ├── schemas/       # Pydantic 请求/响应模型
@@ -309,7 +310,7 @@ Service Worker 只预缓存前端应用壳和本地静态资源，不缓存 API 
 │   └── uploads/           # 运行期书籍与封面（Git 忽略）
 ├── frontend/
 │   ├── public/            # PWA 图标
-│   ├── scripts/           # 阅读页静态回归脚本
+│   ├── scripts/           # 前端静态回归脚本
 │   └── src/
 │       ├── api/           # API 客户端
 │       ├── components/    # 业务组件与 UI 基础组件
@@ -319,7 +320,7 @@ Service Worker 只预缓存前端应用壳和本地静态资源，不缓存 API 
 │       ├── stores/        # Pinia 状态
 │       ├── styles/        # 全局主题样式
 │       ├── types/         # TypeScript API 类型
-│       └── utils/         # 后端切换、token、通知等工具
+│       └── utils/         # token、通知和格式化等工具
 ├── docs/IMPLEMENTATION_STEPS.md
 ├── docker-compose.yml
 ├── UPDATE.md
@@ -340,9 +341,9 @@ Service Worker 只预缓存前端应用壳和本地静态资源，不缓存 API 
 
 Compose 当前固定 `DEBUG=false`，这是预期行为。按本文 Docker 章节调整 Compose 并重建后端后才能开放文档。
 
-### 修改 `BACKEND_PORT` 或 `FRONTEND_PORT` 没有效果
+### 如何修改 Docker 对外端口
 
-当前 Compose 使用固定端口映射，需直接修改 [docker-compose.yml](./docker-compose.yml) 的 `ports`。
+修改 `.env` 中的 `FRONTEND_PORT` 后重新创建容器。后端不再直接映射宿主机端口；本地调试 API 请使用 Uvicorn 开发服务器。
 
 ### 封面显示失败
 

@@ -31,18 +31,7 @@ npm run dev
 
 默认会在 `http://localhost:24412` 启动 Vite 开发服务。
 
-若 backend 不在默认地址，可通过环境变量覆盖：
-
-```bash
-VITE_API_BASE_URL=http://127.0.0.1:8000
-```
-
-Windows PowerShell 示例：
-
-```powershell
-$env:VITE_API_BASE_URL = 'http://127.0.0.1:8000'
-npm run dev
-```
+浏览器始终使用同源 `/api`、`/media/covers` 和 `/health`。开发环境由 Vite 将 API 请求代理到 `http://127.0.0.1:8000`，生产环境由 Nginx 转发到后端容器。
 
 ## 常用命令
 
@@ -74,6 +63,6 @@ npm run typecheck
 
 ## 联调说明
 
-- 若登录时报“无法连接到后端服务”，通常是 backend 未启动或接口地址不一致
+- 若登录时报“无法连接到同源后端”，请检查 backend 是否启动，以及 Vite / Nginx 代理是否正常
 - 阅读页会优先读取服务端进度，并按 `chapter_index + char_offset` 恢复位置
-- 阅读设置保存在浏览器 `localStorage`
+- 阅读设置以服务端用户偏好为主，浏览器 `localStorage` 作为兼容兜底

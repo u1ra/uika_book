@@ -1,34 +1,8 @@
 import { authTokenStorage } from "../utils/token";
 import type { ApiErrorResponse } from "../types/api";
-import { getActiveApiBaseUrl } from "../utils/backend";
 
 function getFallbackOrigin() {
   return typeof window === "undefined" ? "http://127.0.0.1" : window.location.origin;
-}
-
-function trimTrailingSlashes(value: string) {
-  return value.replace(/\/+$/, "");
-}
-
-function buildBaseAwareUrl(baseUrl: string, path: string) {
-  if (!baseUrl) {
-    return new URL(path, getFallbackOrigin()).toString();
-  }
-
-  if (/^https?:\/\//i.test(baseUrl)) {
-    return `${trimTrailingSlashes(baseUrl)}${path}`;
-  }
-
-  const resolvedBaseUrl = new URL(baseUrl, getFallbackOrigin());
-  const normalizedBasePath = trimTrailingSlashes(resolvedBaseUrl.pathname);
-  resolvedBaseUrl.pathname = `${normalizedBasePath}${path}`;
-  resolvedBaseUrl.search = "";
-  resolvedBaseUrl.hash = "";
-  return resolvedBaseUrl.toString();
-}
-
-export function getApiBaseUrl() {
-  return getActiveApiBaseUrl();
 }
 
 export function resolveApiAssetUrl(path: string | null | undefined) {
@@ -40,13 +14,11 @@ export function resolveApiAssetUrl(path: string | null | undefined) {
     return path;
   }
 
-  const apiBaseUrl = getApiBaseUrl();
-
   if (path.startsWith("/")) {
-    return apiBaseUrl ? buildBaseAwareUrl(apiBaseUrl, path) : path;
+    return path;
   }
 
-  return apiBaseUrl ? buildBaseAwareUrl(apiBaseUrl, `/${path}`) : `/${path}`;
+  return `/${path}`;
 }
 
 type QueryValue = string | number | boolean | null | undefined;
@@ -105,9 +77,7 @@ function formatErrorDetail(detail: ApiErrorResponse["detail"]) {
 
 export function buildApiUrl(path: string, query?: Record<string, QueryValue>) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const url = new URL(
-    buildBaseAwareUrl(getApiBaseUrl(), normalizedPath),
-  );
+  const url = new URL(normalizedPath, getFallbackOrigin());
 
   Object.entries(query || {}).forEach(([key, value]) => {
     if (value === null || value === undefined || value === "") {
@@ -160,15 +130,9 @@ async function request<T>(path: string, options: RequestOptions = {}) {
     // eslint-disable-next-line no-console
     console.error("[API] fetch failed:", { url: requestUrl, method, error });
 
-    let message: string;
-
-    if (error instanceof DOMException && error.name === "AbortError") {
-      message = "请求已取消";
-    } else if (requestUrl.startsWith("https://")) {
-      message = "无法建立 HTTPS 连接。请确认后端地址正确、服务已启动，且 SSL/TLS 配置有效。";
-    } else {
-      message = "无法连接到后端服务，请确认后端已启动";
-    }
+    const message = error instanceof DOMException && error.name === "AbortError"
+      ? "请求已取消"
+      : "无法连接到同源后端，请确认服务已启动且反向代理配置正确";
 
     throw new ApiError(message, 0, "NETWORK_ERROR", error);
   }

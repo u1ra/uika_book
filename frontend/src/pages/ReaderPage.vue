@@ -203,9 +203,16 @@
     <transition name="reader-drawer">
       <div v-if="isDrawerOpen" class="reader-drawer">
         <div class="reader-drawer__backdrop" @click="activeDrawer = null"></div>
-        <div class="reader-drawer__panel" :style="{ width: drawerWidth + 'px' }">
+        <div
+          class="reader-drawer__panel"
+          :class="{ 'reader-drawer__panel--catalog': activeDrawer === 'catalog' }"
+          :style="{ width: drawerWidth + 'px' }"
+        >
         <template v-if="activeDrawer === 'catalog'">
-          <div class="reader-drawer__surface" :class="readerThemeClass">
+          <div
+            class="reader-drawer__surface reader-drawer__surface--catalog"
+            :class="readerThemeClass"
+          >
             <div class="reader-drawer__header">
               <span class="reader-drawer__title">{{ drawerTitle }}</span>
               <button type="button" class="reader-drawer__close" @click="activeDrawer = null">
@@ -2117,6 +2124,14 @@ function goToBookshelf() {
   box-sizing: border-box;
 }
 
+.reader-drawer__surface--catalog {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .reader-drawer__header {
   display: flex;
   justify-content: space-between;
@@ -2160,7 +2175,8 @@ function goToBookshelf() {
 }
 
 .reader-catalog__list--drawer {
-  max-height: calc(100dvh - 240px);
+  flex: 1 1 auto;
+  max-height: none;
   margin-top: 18px;
 }
 
@@ -2444,6 +2460,10 @@ function goToBookshelf() {
   height: 100%;
   overflow-y: auto;
   background: var(--reader-panel-bg);
+}
+
+.reader-drawer__panel--catalog {
+  overflow: hidden;
 }
 
 .reader-drawer-enter-active,

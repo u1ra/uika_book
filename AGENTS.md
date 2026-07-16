@@ -23,11 +23,11 @@
 - frontend: `npm run dev`
 - docker: see README
 
-## CORS / 跨域规则
-- 后端已添加原生 ASGI `ReflectCORSMiddleware`（`backend/app/main.py`），反射任意 Origin。
-- `ReflectCORSMiddleware` 必须先于标准 `CORSMiddleware` 注册（外层包裹），否则标准 CORS 会先拦截 OPTIONS 返回 400。
-- ASGI scope 中获取 HTTP method 必须使用 `scope["method"]`，而非 `headers[":method"]`。
-- 通过域名 / 反向代理访问时，若仍出现跨域问题，优先检查反向代理是否正确透传 `Origin` 头，而非盲目扩充 CORS 白名单。
+## 同源访问规则
+- 浏览器端只使用相对路径访问 `/api`、`/media/covers` 与 `/health`，不得恢复运行时后端切换或动态 API Base URL。
+- Docker 部署只向宿主机暴露前端 Nginx；后端仅在 Compose 网络内提供 `8000` 端口。
+- 本地开发通过 Vite proxy 转发到 Uvicorn，不为前端联调启用 CORS。
+- 反向代理必须完整转发 `/api/`、`/media/covers/` 与 `/health`，并由同一 Origin 对浏览器提供服务。
 
 ## PWA / Service Worker 规则
 - 前端已配置 PWA（`vite-plugin-pwa`），Service Worker 会自动缓存静态资源。

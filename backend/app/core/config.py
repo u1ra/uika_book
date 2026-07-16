@@ -1,10 +1,8 @@
 from functools import lru_cache
-import json
 from pathlib import Path
-from typing import Annotated
 
-from pydantic import Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+from pydantic import field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -17,12 +15,6 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     api_v1_prefix: str = "/api/v1"
-    cors_origins: Annotated[list[str], NoDecode] = Field(
-        default_factory=lambda: [
-            "http://localhost:24412",
-            "http://127.0.0.1:24412",
-        ]
-    )
     data_dir: Path = BACKEND_DIR / "data"
     upload_dir: Path = BACKEND_DIR / "uploads"
     database_url: str | None = None
@@ -38,23 +30,6 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
-
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, value: object) -> object:
-        if isinstance(value, str):
-            value = value.strip()
-            if not value:
-                return []
-            if value.startswith("["):
-                parsed = json.loads(value)
-                if not isinstance(parsed, list):
-                    raise ValueError("cors_origins JSON value must be a list")
-                return [str(item).strip() for item in parsed if str(item).strip()]
-            return [item.strip() for item in value.split(",") if item.strip()]
-        if isinstance(value, (list, tuple, set)):
-            return [str(item).strip() for item in value if str(item).strip()]
-        return value
 
     @field_validator("data_dir", "upload_dir", mode="before")
     @classmethod

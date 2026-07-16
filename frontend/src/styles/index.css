@@ -436,20 +436,6 @@ body.app-theme--dark .login-page__card input::placeholder {
   color: var(--text-secondary);
 }
 
-body.app-theme--dark .backend-switcher__radio {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-secondary);
-}
-
-body.app-theme--dark .backend-switcher__radio:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-body.app-theme--dark .backend-switcher__radio--active {
-  background: rgba(255, 143, 171, 0.1);
-  color: var(--primary-color);
-}
-
 body.app-theme--dark .rule-form__textarea {
   background: var(--surface-input-bg);
   color: var(--text-primary);
