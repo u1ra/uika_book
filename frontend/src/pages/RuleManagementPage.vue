@@ -538,95 +538,96 @@
     </div>
 
     <Dialog :open="modalVisible" @update:open="modalVisible = $event">
-      <DialogContent class="max-w-2xl">
+      <DialogContent class="rule-editor-dialog w-[calc(100%-2rem)] max-w-2xl">
         <DialogHeader>
           <DialogTitle>{{ modalTitle }}</DialogTitle>
         </DialogHeader>
 
-      <div class="rule-form__intro">
-        <p>自定义规则支持常见正则 flags，例如 <code>IGNORECASE|MULTILINE</code>。</p>
-      </div>
+        <div class="rule-form__body">
+          <div class="rule-form__intro">
+            <p>自定义规则支持常见正则 flags，例如 <code>IGNORECASE|MULTILINE</code>。</p>
+          </div>
 
-      <div class="rule-form__fields">
-        <div class="rule-form__field"><label>规则名称</label>
-          <Input v-model="formModel.rule_name" maxlength="100" placeholder="例如：轻小说章节规则" />
-        </div>
+          <div class="rule-form__fields">
+            <div class="rule-form__field"><label>规则名称</label>
+              <Input v-model="formModel.rule_name" maxlength="100" placeholder="例如：轻小说章节规则" />
+            </div>
 
-        <div class="rule-form__field"><label>正则表达式</label>
-          <textarea
-            v-model="formModel.regex_pattern"
-            rows="4"
-            placeholder="例如：^\s*第\s*\d+\s*[章节回].*$"
-            class="rule-form__textarea"
-          ></textarea>
-          <div class="rule-field__hint">
-            <span>示例提示：</span>
-            <div class="flex flex-wrap gap-2">
-              <Button
-                v-for="example in regexExamples"
-                :key="`form-${example.label}`"
-                size="sm"
-                variant="ghost"
-                @click="applyExampleToForm(example)"
-              >
-                {{ example.label }}
-              </Button>
+            <div class="rule-form__field"><label>正则表达式</label>
+              <textarea
+                v-model="formModel.regex_pattern"
+                rows="4"
+                placeholder="例如：^\s*第\s*\d+\s*[章节回].*$"
+                class="rule-form__textarea"
+              ></textarea>
+              <div class="rule-field__hint">
+                <span>示例提示：</span>
+                <div class="flex flex-wrap gap-2">
+                  <Button
+                    v-for="example in regexExamples"
+                    :key="`form-${example.label}`"
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    @click="applyExampleToForm(example)"
+                  >
+                    {{ example.label }}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div class="rule-form__field">
+              <div class="rule-form__label-row">
+                <label>Flags</label>
+                <Button type="button" variant="ghost" size="sm" class="rule-form__help-btn" @click="formFlagsHelpVisible = !formFlagsHelpVisible">
+                  ?
+                </Button>
+              </div>
+              <div class="rule-flags-group">
+                <Button
+                  v-for="opt in FLAG_OPTIONS"
+                  :key="opt.key"
+                  type="button"
+                  size="sm"
+                  :variant="isFlagActive(formModel.flags, opt.key) ? 'secondary' : 'outline'"
+                  @click="toggleFlag(formModel, opt.key)"
+                >
+                  <Check v-if="isFlagActive(formModel.flags, opt.key)" :size="14" class="mr-1" />
+                  {{ opt.label }}
+                </Button>
+              </div>
+              <div v-show="formFlagsHelpVisible" class="rule-flags-help">
+                <div v-for="opt in FLAG_OPTIONS" :key="opt.key" class="rule-flags-help__item">
+                  <code>{{ opt.label }}</code>
+                  <span>{{ opt.description }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="rule-form__field"><label>说明</label>
+              <textarea
+                v-model="formModel.description"
+                rows="3"
+                placeholder="简要说明这个规则适合匹配什么样的章节标题"
+                class="rule-form__textarea"
+              ></textarea>
+            </div>
+
+            <div class="rule-form__field">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input v-model="formModel.is_default" type="checkbox" class="rule-form__checkbox" />
+                <span>保存后设为默认规则</span>
+              </label>
             </div>
           </div>
         </div>
 
-        <div class="rule-form__field">
-          <div class="rule-form__label-row">
-            <label>Flags</label>
-            <Button type="button" variant="ghost" size="sm" class="rule-form__help-btn" @click="formFlagsHelpVisible = !formFlagsHelpVisible">
-              ?
-            </Button>
-          </div>
-          <div class="rule-flags-group">
-            <Button
-              v-for="opt in FLAG_OPTIONS"
-              :key="opt.key"
-              type="button"
-              size="sm"
-              :variant="isFlagActive(formModel.flags, opt.key) ? 'secondary' : 'outline'"
-              @click="toggleFlag(formModel, opt.key)"
-            >
-              <Check v-if="isFlagActive(formModel.flags, opt.key)" :size="14" class="mr-1" />
-              {{ opt.label }}
-            </Button>
-          </div>
-          <div v-show="formFlagsHelpVisible" class="rule-flags-help">
-            <div v-for="opt in FLAG_OPTIONS" :key="opt.key" class="rule-flags-help__item">
-              <code>{{ opt.label }}</code>
-              <span>{{ opt.description }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="rule-form__field"><label>说明</label>
-          <textarea
-            v-model="formModel.description"
-            rows="3"
-            placeholder="简要说明这个规则适合匹配什么样的章节标题"
-            class="rule-form__textarea"
-          ></textarea>
-        </div>
-
-        <div class="rule-form__field">
-          <label class="flex items-center gap-2 cursor-pointer">
-              <input v-model="formModel.is_default" type="checkbox" class="rule-form__checkbox" />
-              <span>保存后设为默认规则</span>
-            </label>
-        </div>
-      </div>
-
-      <template #footer>
         <div class="rule-form__footer">
-          <Button variant="ghost" :disabled="submitting" @click="closeModal">取消</Button>
-          <Button :disabled="submitting" @click="submitForm">保存规则</Button>
+          <Button type="button" variant="ghost" :disabled="submitting" @click="closeModal">取消</Button>
+          <Button type="button" :disabled="submitting" @click="submitForm">保存规则</Button>
         </div>
-      </template>
-    </DialogContent>
+      </DialogContent>
     </Dialog>
   </div>
 </template>
@@ -940,14 +941,18 @@ function openEditModal(rule: ChapterRule) {
   modalVisible.value = true;
 }
 
+function resetAndCloseModal() {
+  modalVisible.value = false;
+  editingRuleId.value = null;
+  resetForm();
+}
+
 function closeModal() {
   if (submitting.value) {
     return;
   }
 
-  modalVisible.value = false;
-  editingRuleId.value = null;
-  resetForm();
+  resetAndCloseModal();
 }
 
 async function loadRules() {
@@ -1030,7 +1035,7 @@ async function submitForm() {
       notify.success("规则已创建");
     }
 
-    closeModal();
+    resetAndCloseModal();
     await loadRules();
   } catch (error) {
     notify.error(getErrorMessage(error));
@@ -1490,10 +1495,25 @@ onUnmounted(() => {
   line-height: 1.7;
 }
 
+.rule-editor-dialog {
+  max-height: calc(100dvh - 32px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.rule-form__body {
+  min-height: 0;
+  margin: 0 -8px;
+  padding: 0 8px;
+  overflow-y: auto;
+}
+
 .rule-form__footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color-soft);
+  background: var(--dialog-bg);
 }
 
 .rule-field__hint {
@@ -1947,6 +1967,3 @@ onUnmounted(() => {
 }
 
 </style>
-
-
-
