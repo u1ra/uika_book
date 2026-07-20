@@ -1,10 +1,10 @@
-﻿from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class RuleTestRequest(BaseModel):
     book_id: int | None = Field(default=None, ge=1)
-    text: str | None = None
-    regex_pattern: str = Field(min_length=1)
+    text: str | None = Field(default=None, max_length=200_000)
+    regex_pattern: str = Field(min_length=1, max_length=500)
     flags: str = Field(default="", max_length=100)
 
     @model_validator(mode="after")

@@ -1,14 +1,16 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import AppLayout from "../layouts/AppLayout.vue";
-import BookDetailPage from "../pages/BookDetailPage.vue";
-import BookshelfPage from "../pages/BookshelfPage.vue";
 import LoginPage from "../pages/LoginPage.vue";
-import ReaderPage from "../pages/ReaderPage.vue";
-import RuleManagementPage from "../pages/RuleManagementPage.vue";
 import { pinia } from "../stores";
 import { useAuthStore } from "../stores/auth";
 import { usePreferencesStore } from "../stores/preferences";
+
+// 非首屏页面懒加载：书架/详情/阅读页/规则页按需分包，减小首屏 bundle。
+const BookshelfPage = () => import("../pages/BookshelfPage.vue");
+const BookDetailPage = () => import("../pages/BookDetailPage.vue");
+const ReaderPage = () => import("../pages/ReaderPage.vue");
+const RuleManagementPage = () => import("../pages/RuleManagementPage.vue");
 
 if (typeof window !== "undefined" && "scrollRestoration" in history) {
   history.scrollRestoration = "manual";

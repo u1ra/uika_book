@@ -4,71 +4,75 @@
       v-if="!isImmersiveRoute"
       class="app-layout__header"
     >
-      <div class="app-layout__brand">
+      <div class="app-layout__brand" @click="goTo('books')">
         <img class="app-layout__logo" src="/icon-192.png" alt="初华的书" />
-        <div>
-          <div class="app-layout__title">初华的书</div>
-          <div class="app-layout__subtitle">个人在线阅读器</div>
-        </div>
+        <div class="app-layout__title">初华的书</div>
       </div>
 
-      <div class="app-layout__actions">
-        <div class="app-layout__nav-actions">
-          <Button
-            :variant="route.name === 'books' ? 'default' : 'secondary'"
-            size="sm"
-            @click="goTo('books')"
-          >
-            书架
-          </Button>
-          <Button
-            :variant="route.name === 'rules' ? 'default' : 'secondary'"
-            size="sm"
-            @click="goTo('rules')"
-          >
-            目录规则
-          </Button>
-          <Button variant="secondary" size="sm" @click="handleToggleTheme">
-            {{ themeToggleLabel }}
-          </Button>
-        </div>
+      <nav class="app-layout__nav" aria-label="主导航">
+        <button
+          class="app-layout__nav-link"
+          :class="{ 'app-layout__nav-link--active': route.name === 'books' }"
+          @click="goTo('books')"
+        >
+          书架
+        </button>
+        <button
+          class="app-layout__nav-link"
+          :class="{ 'app-layout__nav-link--active': route.name === 'rules' }"
+          @click="goTo('rules')"
+        >
+          目录规则
+        </button>
+      </nav>
+
+      <div class="app-layout__side">
+        <button
+          class="app-layout__theme-toggle"
+          :title="themeToggleLabel"
+          :aria-label="themeToggleLabel"
+          @click="handleToggleTheme"
+        >
+          <Sun v-if="appThemeStore.theme === 'dark'" :size="17" />
+          <Moon v-else :size="17" />
+        </button>
 
         <div ref="userMenuRef" class="app-layout__user">
-          <div class="app-layout__user-trigger" @click="userMenuOpen = !userMenuOpen">
-            <div class="app-layout__user-meta">
-              <span class="app-layout__username">{{ authStore.user?.username }}</span>
-            </div>
-            <svg
-              class="app-layout__user-chevron"
-              :class="{ 'app-layout__user-chevron--open': userMenuOpen }"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
+        <div class="app-layout__user-trigger" @click="userMenuOpen = !userMenuOpen">
+          <div class="app-layout__user-meta">
+            <span class="app-layout__username">{{ authStore.user?.username }}</span>
           </div>
-
-          <div v-show="userMenuOpen" class="app-layout__user-menu">
-            <button
-              class="app-layout__user-menu-item"
-              @click="passwordModalVisible = true; userMenuOpen = false"
-            >
-              更改密码
-            </button>
-            <button
-              class="app-layout__user-menu-item app-layout__user-menu-item--danger"
-              @click="handleLogout"
-            >
-              退出登录
-            </button>
-          </div>
+          <svg
+            class="app-layout__user-chevron"
+            :class="{ 'app-layout__user-chevron--open': userMenuOpen }"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
         </div>
+
+        <div v-show="userMenuOpen" class="app-layout__user-menu">
+          <button
+            class="app-layout__user-menu-item"
+            @click="passwordModalVisible = true; userMenuOpen = false"
+          >
+            更改密码
+          </button>
+          <button
+            class="app-layout__user-menu-item app-layout__user-menu-item--danger"
+            @click="handleLogout"
+          >
+            退出登录
+          </button>
+        </div>
+      </div>
       </div>
     </header>
 
@@ -121,6 +125,7 @@
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { onClickOutside } from "@vueuse/core";
+import { Moon, Sun } from "lucide-vue-next";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -215,10 +220,6 @@ async function handleChangePassword() {
   background: transparent;
 }
 
-.app-layout--immersive {
-  background: transparent;
-}
-
 .app-layout__header {
   position: sticky;
   top: 0;
@@ -227,47 +228,104 @@ async function handleChangePassword() {
   justify-content: space-between;
   gap: 20px;
   align-items: center;
-  padding: 16px 24px;
+  padding: 12px 28px;
   backdrop-filter: blur(12px);
   background: var(--surface-header-bg);
+  border-bottom: 1px solid var(--border-color-soft);
 }
 
 .app-layout__brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
 }
 
 .app-layout__logo {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   object-fit: cover;
-  box-shadow: 0 12px 24px rgba(74, 159, 217, 0.28);
 }
 
 .app-layout__title {
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: 17px;
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
-.app-layout__subtitle {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.app-layout__actions {
+.app-layout__nav {
   display: flex;
   align-items: center;
-  gap: 18px;
-}
-
-.app-layout__nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
-  max-width: 100%;
+}
+
+.app-layout__nav-link {
+  position: relative;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.app-layout__nav-link:hover {
+  color: var(--text-primary);
+  background: var(--surface-panel-soft-bg);
+}
+
+.app-layout__nav-link--active {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.app-layout__nav-link--active::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--primary-color);
+}
+
+.app-layout__side {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-layout__theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.app-layout__theme-toggle:hover {
+  color: var(--primary-color);
+  background: var(--surface-panel-soft-bg);
+  border-color: var(--border-color);
 }
 
 .app-layout__user {
@@ -281,13 +339,13 @@ async function handleChangePassword() {
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 160ms ease;
 }
 
 .app-layout__user-trigger:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--surface-panel-soft-bg);
 }
 
 .app-layout__user-meta {
@@ -334,7 +392,7 @@ async function handleChangePassword() {
 }
 
 .app-layout__user-menu-item:hover {
-  background: var(--surface-panel-bg);
+  background: var(--surface-panel-soft-bg);
 }
 
 .app-layout__user-menu-item--danger {
@@ -346,7 +404,7 @@ async function handleChangePassword() {
 }
 
 .app-layout__content {
-  padding: 24px;
+  padding: 28px;
 }
 
 .app-layout__content--immersive {
@@ -401,25 +459,22 @@ async function handleChangePassword() {
     display: grid;
     grid-template-columns: 1fr auto;
     grid-template-areas: "brand user" "nav nav";
-    gap: 10px 16px;
+    gap: 6px 16px;
     align-items: center;
+    padding: 10px 16px;
   }
 
   .app-layout__brand {
     grid-area: brand;
   }
 
-  .app-layout__actions {
-    display: contents;
-  }
-
-  .app-layout__nav-actions {
+  .app-layout__nav {
     grid-area: nav;
     flex-wrap: wrap;
     width: 100%;
   }
 
-  .app-layout__user {
+  .app-layout__side {
     grid-area: user;
     justify-self: end;
     align-self: center;

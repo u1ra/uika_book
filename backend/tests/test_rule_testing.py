@@ -170,3 +170,45 @@ def test_rule_test_endpoint_requires_text_or_book(monkeypatch, tmp_path):
         )
 
     assert response.status_code == 422
+
+
+def test_rule_test_endpoint_rejects_oversized_text(monkeypatch, tmp_path):
+    with authenticated_client(monkeypatch, tmp_path) as client:
+        response = client.post(
+            "/api/chapter-rules/test",
+            json={
+                "text": "正文" * 100_001,
+                "regex_pattern": "^第\\d+章.*$",
+                "flags": "m",
+            },
+        )
+
+    assert response.status_code == 422
+
+
+def test_rule_test_endpoint_rejects_oversized_pattern(monkeypatch, tmp_path):
+    with authenticated_client(monkeypatch, tmp_path) as client:
+        response = client.post(
+            "/api/chapter-rules/test",
+            json={
+                "text": "第1章 开始",
+                "regex_pattern": "a" * 501,
+                "flags": "",
+            },
+        )
+
+    assert response.status_code == 422
+
+
+def test_create_rule_rejects_oversized_pattern(monkeypatch, tmp_path):
+    with authenticated_client(monkeypatch, tmp_path) as client:
+        response = client.post(
+            "/api/chapter-rules",
+            json={
+                "rule_name": "oversized",
+                "regex_pattern": "a" * 501,
+                "flags": "",
+            },
+        )
+
+    assert response.status_code == 422

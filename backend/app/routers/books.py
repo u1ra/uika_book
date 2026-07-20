@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import CurrentUser
 from app.schemas.book import (
@@ -43,6 +45,14 @@ from app.services.reading_progress import ReadingProgressNotFoundError, get_user
 router = APIRouter(prefix="/api/books", tags=["books"])
 
 
+def _ensure_upload_size(raw_bytes: bytes, max_size_mb: int, label: str) -> None:
+    if len(raw_bytes) > max_size_mb * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=f"{label} exceeds the maximum allowed size of {max_size_mb} MB",
+        )
+
+
 @router.post("/upload", response_model=BookRead, status_code=status.HTTP_201_CREATED)
 async def upload_book(
     current_user: CurrentUser,
@@ -52,7 +62,11 @@ async def upload_book(
 ) -> BookRead:
     try:
         raw_bytes = await file.read()
-        book = create_uploaded_book(
+        _ensure_upload_size(raw_bytes, settings.max_upload_size_mb, "Book file")
+        # 编码检测、全文正则切分、文件写入与 DB 提交均为重型同步操作，
+        # 移交线程池执行，避免大文件上传阻塞事件循环。
+        book = await run_in_threadpool(
+            create_uploaded_book,
             db=db,
             user=current_user,
             filename=file.filename or "uploaded.txt",
@@ -142,7 +156,9 @@ async def post_book_cover(
 ) -> BookDetail:
     try:
         raw_bytes = await file.read()
-        book = upload_user_book_cover(
+        _ensure_upload_size(raw_bytes, settings.max_cover_size_mb, "Cover image")
+        book = await run_in_threadpool(
+            upload_user_book_cover,
             db,
             current_user.id,
             book_id,

@@ -45,6 +45,40 @@ interface RequestOptions {
   headers?: HeadersInit;
   auth?: boolean;
   signal?: AbortSignal;
+  timeoutMs?: number;
+  skipUnauthorizedHandler?: boolean;
+}
+
+const DEFAULT_TIMEOUT_MS = 30_000;
+
+let unauthorizedHandler: (() => void) | null = null;
+
+/** 注册全局 401 处理（如清理会话并跳登录），由应用装配层注入，避免 client 反向依赖 store/router。 */
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  unauthorizedHandler = handler;
+}
+
+/** 合并外部取消信号与超时信号（不依赖 AbortSignal.any，兼容更多运行时）。 */
+function combineSignals(signals: Array<AbortSignal | undefined>): AbortSignal {
+  const controller = new AbortController();
+  const abort = (reason: unknown) => {
+    if (!controller.signal.aborted) {
+      controller.abort(reason);
+    }
+  };
+
+  for (const signal of signals) {
+    if (!signal) {
+      continue;
+    }
+    if (signal.aborted) {
+      abort(signal.reason);
+      continue;
+    }
+    signal.addEventListener("abort", () => abort(signal.reason), { once: true });
+  }
+
+  return controller.signal;
 }
 
 function isApiErrorResponse(payload: unknown): payload is ApiErrorResponse {
@@ -119,20 +153,23 @@ async function request<T>(path: string, options: RequestOptions = {}) {
   let response: Response;
 
   const requestUrl = buildApiUrl(path, query);
+  const requestSignal = combineSignals([signal, AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS)]);
   try {
     response = await fetch(requestUrl, {
       method,
       headers: requestHeaders,
       body: payload,
-      signal,
+      signal: requestSignal,
     });
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error("[API] fetch failed:", { url: requestUrl, method, error });
 
-    const message = error instanceof DOMException && error.name === "AbortError"
-      ? "请求已取消"
-      : "无法连接到同源后端，请确认服务已启动且反向代理配置正确";
+    const message = error instanceof DOMException && error.name === "TimeoutError"
+      ? "请求超时，请检查网络后重试"
+      : error instanceof DOMException && error.name === "AbortError"
+        ? "请求已取消"
+        : "无法连接到同源后端，请确认服务已启动且反向代理配置正确";
 
     throw new ApiError(message, 0, "NETWORK_ERROR", error);
   }
@@ -145,6 +182,11 @@ async function request<T>(path: string, options: RequestOptions = {}) {
       : await response.text();
 
   if (!response.ok) {
+    // 会话过期：统一走注入的 401 处理（清理会话并跳登录），登录等 auth:false 请求除外。
+    if (response.status === 401 && auth && !options.skipUnauthorizedHandler) {
+      unauthorizedHandler?.();
+    }
+
     if (isApiErrorResponse(data)) {
       const message = data.error?.message || formatErrorDetail(data.detail);
       throw new ApiError(message, response.status, data.error?.code, data.error?.details ?? data.detail);

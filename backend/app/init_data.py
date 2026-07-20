@@ -1,4 +1,5 @@
 from collections.abc import Callable
+import logging
 from pathlib import Path
 
 from sqlalchemy import inspect, text
@@ -6,7 +7,7 @@ from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401 - ensure model modules are imported before create_all
 from app.core import database
-from app.core.config import settings
+from app.core.config import DEFAULT_ADMIN_PASSWORD, DEFAULT_SECRET_KEY, Settings, settings
 from app.core.security import get_password_hash
 from app.models import User
 from app.services.auth import get_user_by_username
@@ -15,7 +16,27 @@ from app.services.chapter_rules import seed_builtin_rules
 from app.utils.files import ensure_directory
 
 
+logger = logging.getLogger(__name__)
+
 Seeder = Callable[[Session], None]
+
+
+def warn_if_insecure_production_settings(config: Settings = settings) -> None:
+    """生产模式（debug=false）下仍使用默认密钥/默认管理员密码时发出告警。
+
+    个人项目不拒绝启动以避免锁死既有部署，但必须留下明显日志。
+    """
+    if config.debug:
+        return
+    if config.secret_key == DEFAULT_SECRET_KEY:
+        logger.warning(
+            "SECRET_KEY 仍为默认值，任何人都可以伪造登录令牌。"
+            "请在 .env 中设置随机 SECRET_KEY（例如：python -c \"import secrets; print(secrets.token_hex(32))\"）。"
+        )
+    if config.default_admin_password == DEFAULT_ADMIN_PASSWORD:
+        logger.warning(
+            "DEFAULT_ADMIN_PASSWORD 仍为默认值 admin123，请通过 .env 修改并使用 scripts/manage_admin_user.py 更新账号。"
+        )
 
 
 def ensure_runtime_directories() -> dict[str, Path]:
@@ -82,6 +103,7 @@ def _seed_book_groups(session: Session) -> None:
 
 
 def bootstrap_application() -> None:
+    warn_if_insecure_production_settings()
     init_db()
 
 

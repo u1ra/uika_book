@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -6,22 +6,21 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <!-- theme-color 使用蓝色：Chrome 安卓 PWA 加载进度条颜色由 theme-color 决定。
-         深色 theme-color 会导致进度条显示为白色/浅灰（对比色），非常刺眼。
-         使用蓝色可让进度条恢复 Chrome 默认蓝色，在深浅背景下都更自然。 -->
-    <meta name="theme-color" content="#4A9FD9" />
+    <!-- theme-color 使用暖纸白（浅色主题默认）：与沉浸阅读风的浅色背景一致。
+         暗色主题下由 stores/app-theme.ts 运行时切换为暖灰黑。 -->
+    <meta name="theme-color" content="#F7F4ED" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <!-- 内联兜底：确保 CSS 加载完成前页面背景为深色，消除 PWA 启动/刷新时顶部安全区域的白线闪白。
          不用 !important，让外部 CSS 加载后正常覆盖（light 模式恢复浅色，dark 模式保持深色）。 -->
     <style>
-      html, body { background-color: #1A1A2E; }
+      html, body { background-color: #14120F; }
     </style>
     <meta name="apple-mobile-web-app-title" content="初华的书" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>初华的书</title>
-    <!-- 引入霞鹜文楷字体：二次元阅读器的核心字体，提供温暖手写感 -->
+    <!-- 引入霞鹜文楷字体：沉浸阅读风的核心字体，提供温暖书卷感 -->
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css"

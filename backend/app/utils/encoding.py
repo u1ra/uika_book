@@ -23,22 +23,27 @@ def detect_text_encoding(raw_bytes: bytes) -> tuple[str, str]:
     if b"\x00" in raw_bytes:
         try:
             return "utf-16", _decode_utf16(raw_bytes)
-        except UnicodeDecodeError:
+        except EncodingDetectionError:
             pass
 
     try:
         return "gbk", raw_bytes.decode("gbk")
+    except UnicodeDecodeError:
+        pass
+
+    try:
+        return "gb18030", raw_bytes.decode("gb18030")
     except UnicodeDecodeError as exc:
-        raise EncodingDetectionError("Unable to detect text encoding. Supported encodings: UTF-8, GBK, UTF-16") from exc
+        raise EncodingDetectionError("Unable to detect text encoding. Supported encodings: UTF-8, GBK, GB18030, UTF-16") from exc
 
 
 def _decode_utf16(raw_bytes: bytes) -> str:
     try:
         decoded = raw_bytes.decode("utf-16")
     except UnicodeDecodeError as exc:
-        raise EncodingDetectionError("Unable to detect text encoding. Supported encodings: UTF-8, GBK, UTF-16") from exc
+        raise EncodingDetectionError("Unable to detect text encoding. Supported encodings: UTF-8, GBK, GB18030, UTF-16") from exc
 
     if decoded.startswith(("\ufeff", "\ufffe")):
-        raise EncodingDetectionError("Unable to detect text encoding. Supported encodings: UTF-8, GBK, UTF-16")
+        raise EncodingDetectionError("Unable to detect text encoding. Supported encodings: UTF-8, GBK, GB18030, UTF-16")
 
     return decoded

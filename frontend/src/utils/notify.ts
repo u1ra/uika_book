@@ -18,6 +18,7 @@ interface NotificationRequest {
   cancelLabel: string;
   showCancel: boolean;
   destructive: boolean;
+  autoDismissMs: number | null;
   resolve?: (confirmed: boolean) => void;
 }
 
@@ -28,8 +29,15 @@ const DEFAULT_TITLES: Record<NotificationVariant, string> = {
   warning: "请确认",
 };
 
+// success/info 属于高频轻反馈，默认自动消失；error 与 confirm 保持手动确认。
+const AUTO_DISMISS_DEFAULT_MS: Partial<Record<NotificationVariant, number>> = {
+  success: 3000,
+  info: 3000,
+};
+
 const notificationQueue: NotificationRequest[] = [];
 let activeRequest: NotificationRequest | null = null;
+let autoDismissTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const notificationDialogState = reactive({
   open: false,
@@ -65,9 +73,22 @@ function showNextNotification() {
     showCancel: activeRequest.showCancel,
     destructive: activeRequest.destructive,
   });
+
+  if (activeRequest.autoDismissMs !== null) {
+    autoDismissTimer = setTimeout(() => finishNotification(true), activeRequest.autoDismissMs);
+  }
+}
+
+function clearAutoDismissTimer() {
+  if (autoDismissTimer !== null) {
+    clearTimeout(autoDismissTimer);
+    autoDismissTimer = null;
+  }
 }
 
 function finishNotification(confirmed: boolean) {
+  clearAutoDismissTimer();
+
   if (!activeRequest) {
     notificationDialogState.open = false;
     return;
@@ -78,7 +99,7 @@ function finishNotification(confirmed: boolean) {
   notificationDialogState.open = false;
   finishedRequest.resolve?.(confirmed);
 
-  window.setTimeout(showNextNotification, 0);
+  setTimeout(showNextNotification, 0);
 }
 
 function showResult(variant: NotificationVariant, message: string, options: NotificationOptions = {}) {
@@ -90,6 +111,7 @@ function showResult(variant: NotificationVariant, message: string, options: Noti
     cancelLabel: options.cancelLabel || "取消",
     showCancel: false,
     destructive: false,
+    autoDismissMs: options.duration ?? AUTO_DISMISS_DEFAULT_MS[variant] ?? null,
   });
 }
 
@@ -122,6 +144,7 @@ export const notify = {
         cancelLabel: options.cancelLabel || "取消",
         showCancel: true,
         destructive: options.destructive ?? false,
+        autoDismissMs: null,
         resolve,
       });
     }),

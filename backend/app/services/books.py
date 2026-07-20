@@ -1,7 +1,7 @@
+import logging
 import re
 import uuid
 from collections.abc import Sequence
-from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,6 +15,7 @@ from app.services.book_chapters import replace_book_chapters, save_book_chapters
 from app.services.book_groups import BookGroupError, ensure_default_group, get_user_groups_by_ids
 from app.services.chapter_rules import get_default_rule, get_visible_rule
 from app.services.chapter_splitter import ChapterSegment, split_book_into_chapters
+from app.utils.datetime import ensure_utc_datetime
 from app.utils.encoding import EncodingDetectionError, detect_text_encoding
 from app.utils.regex import FULL_TEXT_FLAG, FULL_TEXT_PATTERN, RegexRuleError
 
@@ -64,6 +65,8 @@ ALLOWED_COVER_CONTENT_TYPES = {
     "image/png": ".png",
     "image/webp": ".webp",
 }
+
+logger = logging.getLogger(__name__)
 
 
 def list_user_books(
@@ -289,19 +292,20 @@ def delete_user_book(db: Session, user_id: int, book_id: int) -> None:
     book = get_user_book(db, user_id, book_id)
     file_paths = _collect_book_file_paths(book)
 
+    # 先提交数据库删除，再 best-effort 清理文件：
+    # 文件删除失败只留下可清理的残留文件，而反向顺序失败会留下指向丢失文件的数据库记录。
     try:
         db.delete(book)
-        db.flush()
-        for file_path in file_paths:
-            if file_path.exists():
-                file_path.unlink()
         db.commit()
-    except OSError as exc:
-        db.rollback()
-        raise BookDeleteError(f"Failed to delete local book file: {exc}") from exc
     except IntegrityError as exc:
         db.rollback()
         raise BookDeleteError("Failed to delete book") from exc
+
+    for file_path in file_paths:
+        try:
+            file_path.unlink(missing_ok=True)
+        except OSError:
+            logger.warning("Failed to delete book file %s", file_path, exc_info=True)
 
 
 def reparse_user_book(db: Session, user_id: int, book_id: int, chapter_rule_id: int) -> tuple[Book, list[BookChapter]]:
@@ -320,6 +324,7 @@ def reparse_user_book(db: Session, user_id: int, book_id: int, chapter_rule_id: 
         book.chapter_rule_id = chapter_rule.id
         book.total_words = _count_text_units(text)
         replace_book_chapters(db, book, chapter_segments)
+        _clamp_reading_progress_after_reparse(db, user_id, book.id, chapter_segments)
         db.commit()
         db.refresh(book)
     except IntegrityError as exc:
@@ -431,6 +436,38 @@ def _split_book_content(text: str, chapter_rule: ChapterRule | None) -> list[Cha
     return split_book_into_chapters(text, chapter_rule)
 
 
+def _clamp_reading_progress_after_reparse(
+    db: Session,
+    user_id: int,
+    book_id: int,
+    chapter_segments: list[ChapterSegment],
+) -> None:
+    """重解析后既有进度可能越界：钳制到新章节范围内，避免前端按旧进度定位出错。"""
+    progress = db.execute(
+        select(ReadingProgress).where(
+            ReadingProgress.user_id == user_id,
+            ReadingProgress.book_id == book_id,
+        )
+    ).scalar_one_or_none()
+    if progress is None or not chapter_segments:
+        return
+
+    max_index = len(chapter_segments) - 1
+    clamped_index = min(max(progress.chapter_index, 0), max_index)
+    segment = chapter_segments[clamped_index]
+    chapter_length = max(0, segment.end_offset - segment.start_offset)
+    clamped_offset = min(max(progress.char_offset, 0), chapter_length)
+
+    if clamped_index == progress.chapter_index and clamped_offset == progress.char_offset:
+        return
+
+    progress.chapter_index = clamped_index
+    progress.char_offset = clamped_offset
+    # percent 仅用于展示，与前端 buildProgressSnapshotForPosition 的公式保持一致。
+    chapter_ratio = clamped_offset / chapter_length if chapter_length > 0 else 0
+    progress.percent = round(((clamped_index + chapter_ratio) / len(chapter_segments)) * 100, 2)
+
+
 def _collect_book_file_paths(book: Book) -> list[Path]:
     normalized_path = Path(book.file_path)
     raw_dir = settings.upload_dir / "raw" / str(book.user_id)
@@ -475,7 +512,7 @@ def _apply_book_sort(statement, sort: str):
 
 
 def _serialize_bookshelf_item(book: Book, progress: ReadingProgress | None) -> dict[str, object]:
-    recent_read_at = _ensure_utc_datetime(progress.updated_at) if progress is not None else None
+    recent_read_at = ensure_utc_datetime(progress.updated_at) if progress is not None else None
     return {
         "id": book.id,
         "title": get_book_display_title(book.title, book.file_name),
@@ -508,7 +545,7 @@ def _serialize_book_detail(book: Book, progress: ReadingProgress | None) -> dict
         "cover_url": _build_cover_url(book.cover_path),
         "created_at": book.created_at,
         "updated_at": book.updated_at,
-        "recent_read_at": _ensure_utc_datetime(progress.updated_at) if progress is not None else None,
+        "recent_read_at": ensure_utc_datetime(progress.updated_at) if progress is not None else None,
         "progress_percent": progress.percent if progress is not None else None,
         "groups": _serialize_book_groups(book.groups),
         "chapter_rule": book.chapter_rule,
@@ -551,8 +588,3 @@ def _build_cover_url(cover_path: str | None) -> str | None:
         return None
     return f"{COVER_URL_PREFIX}/{relative_path}"
 
-
-def _ensure_utc_datetime(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)

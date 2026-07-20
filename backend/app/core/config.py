@@ -7,6 +7,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
+# 默认值仅用于本地开发兜底；生产部署必须通过环境变量覆盖（见 init_data 启动告警）。
+DEFAULT_SECRET_KEY = "change-this-in-production"
+DEFAULT_ADMIN_PASSWORD = "admin123"
+
 
 class Settings(BaseSettings):
     app_name: str = "初华的书 API"
@@ -14,15 +18,16 @@ class Settings(BaseSettings):
     debug: bool = True
     host: str = "0.0.0.0"
     port: int = 8000
-    api_v1_prefix: str = "/api/v1"
     data_dir: Path = BACKEND_DIR / "data"
     upload_dir: Path = BACKEND_DIR / "uploads"
     database_url: str | None = None
-    secret_key: str = "change-this-in-production"
+    secret_key: str = DEFAULT_SECRET_KEY
     access_token_expire_minutes: int = 60 * 24 * 7
     default_admin_username: str = "admin"
-    default_admin_password: str = "admin123"
+    default_admin_password: str = DEFAULT_ADMIN_PASSWORD
     default_txt_encoding: str = "utf-8"
+    max_upload_size_mb: int = 100
+    max_cover_size_mb: int = 10
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_DIR / ".env",

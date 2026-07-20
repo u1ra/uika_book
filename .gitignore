@@ -26,6 +26,7 @@ backend/data/
 backend/data-refactor/
 backend/uploads/
 backend/uploads-refactor/
+backend/backups/
 build/
 
 # Project-local AI memory

@@ -294,6 +294,27 @@ def test_delete_book_removes_database_records_and_local_files(monkeypatch, tmp_p
     assert all(not raw_file.exists() for raw_file in raw_files)
 
 
+def test_delete_book_succeeds_even_when_file_cleanup_fails(monkeypatch, tmp_path):
+    original_unlink = Path.unlink
+
+    def failing_unlink(self, *args, **kwargs):
+        if "uploads" in str(self):
+            raise OSError("simulated disk failure")
+        return original_unlink(self, *args, **kwargs)
+
+    with authenticated_client(monkeypatch, tmp_path) as client:
+        book = upload_book(client, "delete-partial.txt", BOOK_ONE_TEXT)
+        normalized_path = Path(get_book_or_none(book["id"]).file_path)
+
+        monkeypatch.setattr(Path, "unlink", failing_unlink)
+        response = client.delete(f"/api/books/{book['id']}")
+
+    # 文件删除失败不允许回滚数据库删除：记录已删、接口成功、文件残留可后续清理。
+    assert response.status_code == 204
+    assert get_book_or_none(book["id"]) is None
+    assert normalized_path.exists()
+
+
 def test_get_books_supports_sorting_and_group_filter(monkeypatch, tmp_path):
     with authenticated_client(monkeypatch, tmp_path) as client:
         user_id = get_admin_user_id()

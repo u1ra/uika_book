@@ -205,9 +205,9 @@ async function confirmDelete(groupId: number, groupName: string) {
   display: grid;
   gap: 14px;
   padding: 16px 18px;
-  border: 1px solid rgba(74, 159, 217, 0.1);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.64);
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-card-bg);
 }
 
 .group-manager__meta {

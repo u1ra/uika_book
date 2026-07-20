@@ -1,11 +1,10 @@
-﻿from datetime import datetime, timezone
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import ReadingProgress
 from app.schemas.reading_progress import ReadingProgressSyncRequest
 from app.services.books import BookNotFoundError, get_user_book
+from app.utils.datetime import ensure_utc_datetime
 
 
 class ReadingProgressNotFoundError(ValueError):
@@ -21,7 +20,7 @@ def get_user_reading_progress(db: Session, user_id: int, book_id: int) -> Readin
     progress = _get_progress_row(db, user_id, book_id)
     if progress is None:
         raise ReadingProgressNotFoundError("Reading progress not found")
-    progress.updated_at = _ensure_utc_datetime(progress.updated_at)
+    progress.updated_at = ensure_utc_datetime(progress.updated_at)
     return progress
 
 
@@ -32,7 +31,7 @@ def upsert_user_reading_progress(
     payload: ReadingProgressSyncRequest,
 ) -> ReadingProgress:
     get_user_book(db, user_id, book_id)
-    incoming_updated_at = _ensure_utc_datetime(payload.updated_at)
+    incoming_updated_at = ensure_utc_datetime(payload.updated_at)
     progress = _get_progress_row(db, user_id, book_id)
 
     if progress is None:
@@ -47,10 +46,10 @@ def upsert_user_reading_progress(
         db.add(progress)
         db.commit()
         db.refresh(progress)
-        progress.updated_at = _ensure_utc_datetime(progress.updated_at)
+        progress.updated_at = ensure_utc_datetime(progress.updated_at)
         return progress
 
-    current_updated_at = _ensure_utc_datetime(progress.updated_at)
+    current_updated_at = ensure_utc_datetime(progress.updated_at)
     if current_updated_at > incoming_updated_at:
         progress.updated_at = current_updated_at
         return progress
@@ -61,7 +60,7 @@ def upsert_user_reading_progress(
     progress.updated_at = incoming_updated_at
     db.commit()
     db.refresh(progress)
-    progress.updated_at = _ensure_utc_datetime(progress.updated_at)
+    progress.updated_at = ensure_utc_datetime(progress.updated_at)
     return progress
 
 
@@ -72,8 +71,3 @@ def _get_progress_row(db: Session, user_id: int, book_id: int) -> ReadingProgres
     )
     return db.execute(statement).scalar_one_or_none()
 
-
-def _ensure_utc_datetime(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)

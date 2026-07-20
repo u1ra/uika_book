@@ -1,4 +1,4 @@
-﻿# Backend Quick Start
+# Backend Quick Start
 
 ## 1. Prepare Python
 
@@ -49,6 +49,9 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## 6. Run with Docker
+
+> 本节命令仅用于脱离 Compose 的独立调试。常规部署请使用根目录 `docker-compose.yml`：
+> Compose 部署中后端不直接映射宿主机端口，所有浏览器请求经前端 Nginx 同源转发。
 
 Build the image from the `backend` directory:
 

@@ -31,7 +31,7 @@ export interface ReaderPreferencesState {
   paragraphSpacing: number;
   contentWidth: number;
   theme: "light" | "dark";
-  // 二次元 UI 主题扩展字段
+  // UI 主题扩展字段
   themeColor: string;
   borderRadius: "soft" | "standard";
   fontFamily: "lxgwwenkai" | "system";
@@ -65,8 +65,8 @@ export const DEFAULT_READER_PREFERENCES: ReaderPreferencesState = {
   paragraphSpacing: 1,
   contentWidth: 72,
   theme: "light",
-  // 二次元 UI 主题默认值：樱花粉、大圆角、霞鹜文楷
-  themeColor: "#f4a4b4",
+  // UI 主题默认值：陶棕（沉浸阅读风）、大圆角、霞鹜文楷
+  themeColor: "#9A6238",
   borderRadius: "soft",
   fontFamily: "lxgwwenkai",
 };
@@ -117,7 +117,7 @@ function normalizeReaderPreferences(input?: Partial<ReaderPreferencesState>): Re
     ),
     contentWidth: Math.round(clampNumber(input?.contentWidth, 56, 96, DEFAULT_READER_PREFERENCES.contentWidth)),
     theme: input?.theme === "dark" ? "dark" : "light",
-    // 二次元 UI 主题字段归一化：非法值回退到默认值，确保 UI 不会因脏数据崩溃
+    // UI 主题字段归一化：非法值回退到默认值，确保 UI 不会因脏数据崩溃
     themeColor: _normalizeHexColor(input?.themeColor, DEFAULT_READER_PREFERENCES.themeColor),
     borderRadius: input?.borderRadius === "standard" ? "standard" : "soft",
     fontFamily: input?.fontFamily === "system" ? "system" : "lxgwwenkai",
@@ -208,7 +208,7 @@ function toApiReaderPatch(input: Partial<ReaderPreferencesState>): ApiReaderPref
   if (input.theme !== undefined) {
     patch.theme = input.theme;
   }
-  // 二次元 UI 主题字段映射：仅当值存在时才加入 patch，遵循原有 unset 语义
+  // UI 主题字段映射：仅当值存在时才加入 patch，遵循原有 unset 语义
   if (input.themeColor !== undefined) {
     patch.theme_color = input.themeColor;
   }
@@ -410,7 +410,7 @@ export const usePreferencesStore = defineStore("preferences", {
       if (nextValue.theme !== this.reader.theme) {
         changedPatch.theme = nextValue.theme;
       }
-      // 二次元 UI 主题字段变更检测：任一字段变化即触发保存与 DOM 更新
+      // UI 主题字段变更检测：任一字段变化即触发保存与 DOM 更新
       if (nextValue.themeColor !== this.reader.themeColor) {
         changedPatch.themeColor = nextValue.themeColor;
       }

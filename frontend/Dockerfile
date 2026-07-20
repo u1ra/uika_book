@@ -1,9 +1,9 @@
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install --no-package-lock
+COPY package.json package-lock.json ./
+RUN npm ci
 RUN chmod +x node_modules/.bin/*
 
 COPY . .

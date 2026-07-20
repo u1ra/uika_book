@@ -1,98 +1,82 @@
 <template>
   <div class="login-page">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div>
-        <div class="login-page__intro">
-          <div class="login-page__eyebrow">初华的书</div>
-          <h1 class="login-page__title">
-            <span>把喜欢的故事，</span>
-            <span>留在自己的书架里。</span>
-          </h1>
-          <p class="login-page__description">
-            上传 TXT，整理章节，安静地读下去。阅读位置会自动保存，下次打开时可以接着上次停下的地方继续。
-          </p>
+    <main class="login-page__panel">
+      <section class="login-page__intro">
+        <div class="login-page__eyebrow">初华的书</div>
+        <h1 class="login-page__title">
+          <span>把喜欢的故事，</span>
+          <span>留在自己的书架里。</span>
+        </h1>
+        <p class="login-page__description">
+          上传 TXT，整理章节，安静地读下去。阅读位置会自动保存，下次打开时可以接着上次停下的地方继续。
+        </p>
 
-          <div class="login-page__feature-list" aria-label="阅读器主要功能">
-            <div class="login-page__feature-item">
-              <span class="login-page__feature-dot" />
-              <div>
-                <strong>TXT 私人书架</strong>
-                <span>上传、整理和查找自己的本地书籍</span>
-              </div>
-            </div>
-            <div class="login-page__feature-item">
-              <span class="login-page__feature-dot" />
-              <div>
-                <strong>章节目录</strong>
-                <span>自动识别章节，也支持自定义目录规则</span>
-              </div>
-            </div>
-            <div class="login-page__feature-item">
-              <span class="login-page__feature-dot" />
-              <div>
-                <strong>阅读进度</strong>
-                <span>按章节和阅读位置保存，下次打开继续阅读</span>
-              </div>
-            </div>
-          </div>
+        <ul class="login-page__feature-list" aria-label="阅读器主要功能">
+          <li class="login-page__feature-item">
+            <strong>TXT 私人书架</strong>
+            <span>上传、整理和查找自己的本地书籍</span>
+          </li>
+          <li class="login-page__feature-item">
+            <strong>章节目录</strong>
+            <span>自动识别章节，也支持自定义目录规则</span>
+          </li>
+          <li class="login-page__feature-item">
+            <strong>阅读进度</strong>
+            <span>按章节和阅读位置保存，下次打开继续阅读</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="login-page__form">
+        <div class="login-page__form-header">
+          <h2 class="login-page__form-title">登录</h2>
+          <p class="login-page__form-subtitle">{{ redirectHint }}</p>
         </div>
-      </div>
 
-      <div>
-        <Card class="login-page__card">
-          <CardContent class="flex flex-col gap-4 pt-6">
-            <div>
-              <h2 class="login-page__form-title">登录</h2>
-              <p class="login-page__form-subtitle">
-                {{ redirectHint }}
-              </p>
-            </div>
+        <Alert v-if="authStore.errorMessage" variant="destructive">
+          {{ authStore.errorMessage }}
+        </Alert>
 
-            <Alert v-if="authStore.errorMessage" variant="destructive">
-              {{ authStore.errorMessage }}
-            </Alert>
+        <form class="login-page__form-fields" @submit.prevent="handleLogin">
+          <div class="login-page__field">
+            <label class="login-page__label" for="login-username">用户名</label>
+            <Input
+              id="login-username"
+              v-model="form.username"
+              placeholder="请输入用户名"
+              :disabled="authStore.loginPending"
+              @update:model-value="clearError"
+            />
+          </div>
 
-            <form class="flex flex-col gap-4" @submit.prevent="handleLogin">
-              <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-medium">用户名</label>
-                <Input
-                  v-model="form.username"
-                  placeholder="请输入用户名"
-                  :disabled="authStore.loginPending"
-                  @update:model-value="clearError"
-                />
-              </div>
+          <div class="login-page__field">
+            <label class="login-page__label" for="login-password">密码</label>
+            <Input
+              id="login-password"
+              v-model="form.password"
+              type="password"
+              placeholder="请输入密码"
+              :disabled="authStore.loginPending"
+              @update:model-value="clearError"
+              @keydown.enter.prevent="handleLogin"
+            />
+          </div>
 
-              <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-medium">密码</label>
-                <Input
-                  v-model="form.password"
-                  type="password"
-                  placeholder="请输入密码"
-                  :disabled="authStore.loginPending"
-                  @update:model-value="clearError"
-                  @keydown.enter.prevent="handleLogin"
-                />
-              </div>
+          <Button
+            type="submit"
+            size="lg"
+            class="login-page__submit"
+            :disabled="authStore.loginPending"
+          >
+            {{ authStore.loginPending ? "登录中..." : "登录并进入书架" }}
+          </Button>
+        </form>
 
-              <Button
-                type="submit"
-                size="lg"
-                class="w-full"
-                :disabled="authStore.loginPending"
-              >
-                登录并进入书架
-              </Button>
-            </form>
-
-            <div class="login-page__footnote">
-              如果后端未启动，登录页会直接提示连接失败，方便你区分"服务没开"和"账号密码错误"。
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-
+        <p class="login-page__footnote">
+          如果后端未启动，登录页会直接提示连接失败，方便你区分“服务没开”和“账号密码错误”。
+        </p>
+      </section>
+    </main>
   </div>
 </template>
 
@@ -102,7 +86,6 @@ import { useRoute, useRouter } from "vue-router";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { notify } from "@/utils/notify";
 import { useAuthStore } from "../stores/auth";
@@ -150,56 +133,50 @@ async function handleLogin() {
     await router.push(redirect);
   } catch {}
 }
-
 </script>
 
 <style scoped>
 .login-page {
-  width: min(1100px, 100%);
-  margin: 0 auto;
   min-height: 100dvh;
   display: grid;
+  place-items: center;
+  padding: 32px 20px;
+}
+
+.login-page__panel {
+  width: min(960px, 100%);
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: clamp(32px, 6vw, 72px);
   align-items: center;
-  padding: 24px 0;
 }
 
-.login-page__intro,
-.login-page__card {
-  height: 100%;
-  border-radius: 28px;
-}
-
+/* 品牌区：纯排版，无卡片 */
 .login-page__intro {
   display: grid;
-  gap: 22px;
-  padding: clamp(24px, 5vw, 40px);
-  background:
-    radial-gradient(circle at top right, rgba(74, 159, 217, 0.22), transparent 34%),
-    radial-gradient(circle at bottom left, rgba(244, 164, 180, 0.12), transparent 30%),
-    color-mix(in srgb, var(--surface-color) 94%, white 6%);
-  box-shadow: var(--surface-shadow);
+  gap: 20px;
+  align-content: center;
 }
 
 .login-page__eyebrow {
   display: inline-flex;
   width: fit-content;
-  padding: 6px 12px;
+  padding: 5px 12px;
+  border: 1px solid var(--border-color-soft);
   border-radius: 999px;
-  background: var(--primary-soft);
   color: var(--primary-color);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.14em;
 }
 
 .login-page__title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(36px, 4.5vw, 52px);
+  font-size: clamp(34px, 4.5vw, 50px);
   font-weight: 500;
-  letter-spacing: -0.035em;
-  line-height: 1.12;
+  letter-spacing: -0.02em;
+  line-height: 1.18;
   text-wrap: balance;
 }
 
@@ -207,40 +184,27 @@ async function handleLogin() {
   display: block;
 }
 
-.login-page__description,
-.login-page__form-subtitle {
+.login-page__description {
   margin: 0;
+  max-width: 42ch;
   color: var(--text-secondary);
-  line-height: 1.8;
-}
-
-.login-page__form-title {
-  margin: 0 0 8px;
-  font-family: var(--font-display);
-  font-size: 28px;
-}
-
-.login-page__card {
-  background: color-mix(in srgb, var(--surface-color) 94%, white 6%);
-  box-shadow: var(--surface-shadow);
+  line-height: 1.9;
 }
 
 .login-page__feature-list {
   display: grid;
-  gap: 12px;
+  gap: 0;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border-color-soft);
 }
 
 .login-page__feature-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  color: var(--text-secondary);
-  line-height: 1.7;
-}
-
-.login-page__feature-item strong,
-.login-page__feature-item span {
-  display: block;
+  display: grid;
+  gap: 2px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color-soft);
 }
 
 .login-page__feature-item strong {
@@ -249,35 +213,80 @@ async function handleLogin() {
   font-weight: 600;
 }
 
-.login-page__feature-item div > span {
-  margin-top: 2px;
-  font-size: 13px;
-}
-
-.login-page__feature-dot {
-  width: 10px;
-  height: 10px;
-  margin-top: 8px;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-  box-shadow: 0 0 0 6px var(--primary-soft);
-}
-
-.login-page__error {
-  border-radius: 16px;
-}
-
-.login-page__footnote {
+.login-page__feature-item span {
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.7;
 }
 
-@media (max-width: 1023px) {
+/* 登录表单：暖白软面板 */
+.login-page__form {
+  display: grid;
+  gap: 18px;
+  padding: clamp(24px, 4vw, 36px);
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-lg);
+  background: var(--surface-color);
+}
+
+.login-page__form-header {
+  display: grid;
+  gap: 6px;
+}
+
+.login-page__form-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.login-page__form-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.login-page__form-fields {
+  display: grid;
+  gap: 14px;
+}
+
+.login-page__field {
+  display: grid;
+  gap: 6px;
+}
+
+.login-page__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.login-page__submit {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.login-page__footnote {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.7;
+  opacity: 0.85;
+}
+
+@media (max-width: 860px) {
   .login-page {
-    min-height: auto;
-    padding: 24px 0 40px;
+    place-items: start center;
+    padding: 40px 20px;
+  }
+
+  .login-page__panel {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    max-width: 460px;
   }
 }
 </style>

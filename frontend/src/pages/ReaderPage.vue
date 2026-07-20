@@ -58,28 +58,42 @@
     <div v-else class="reader-shell">
       <aside class="reader-rail" :class="{ 'reader-rail--active': shouldShowChrome }">
         <div class="reader-glass reader-rail__panel" @click.stop>
-          <div class="reader-rail__brand">
-            <span class="reader-eyebrow">Immersive Reader</span>
-            <strong class="reader-rail__chapter">{{ currentChapterPositionLabel }}</strong>
-            <span class="reader-rail__sync">{{ syncStatusTagLabel }}</span>
-          </div>
-
           <div class="reader-rail__actions">
-            <button type="button" class="reader-rail__action" @click.stop="goToBookshelf">
-              <strong>返回书架</strong>
-              <span>回到我的书架</span>
+            <button
+              type="button"
+              class="reader-rail__action"
+              title="返回书架"
+              aria-label="返回书架"
+              @click.stop="goToBookshelf"
+            >
+              <Library :size="19" :stroke-width="1.8" />
             </button>
-            <button type="button" class="reader-rail__action" @click.stop="goBack">
-              <strong>返回详情</strong>
-              <span>回到书籍信息与目录入口</span>
+            <button
+              type="button"
+              class="reader-rail__action"
+              title="返回详情"
+              aria-label="返回详情"
+              @click.stop="goBack"
+            >
+              <ArrowLeft :size="19" :stroke-width="1.8" />
             </button>
-            <button type="button" class="reader-rail__action" @click.stop="openDrawer('catalog')">
-              <strong>目录</strong>
-              <span>从左侧抽屉浏览章节</span>
+            <button
+              type="button"
+              class="reader-rail__action"
+              title="目录"
+              aria-label="目录"
+              @click.stop="openDrawer('catalog')"
+            >
+              <List :size="19" :stroke-width="1.8" />
             </button>
-            <button type="button" class="reader-rail__action" @click.stop="openDrawer('settings')">
-              <strong>设置</strong>
-              <span>字体、行高与主题</span>
+            <button
+              type="button"
+              class="reader-rail__action"
+              title="设置"
+              aria-label="设置"
+              @click.stop="openDrawer('settings')"
+            >
+              <Settings :size="19" :stroke-width="1.8" />
             </button>
           </div>
         </div>
@@ -87,22 +101,11 @@
 
       <main class="reader-stage" @click="handleReadingSurfaceTap">
         <section class="reader-stage__hero">
-          <span class="reader-eyebrow">Scroll Reading</span>
-
-          <div class="reader-stage__header">
-            <div>
-              <p v-if="bookTitle" class="reader-stage__book">{{ bookTitle }}</p>
-              <p class="reader-stage__chapter">{{ currentChapterPositionLabel }}</p>
-              <h1 class="reader-stage__title">{{ currentChapterTitle }}</h1>
-            </div>
-
-            <div class="reader-stage__stat">
-              <span>当前进度</span>
-              <strong>{{ progressPercentLabel }}</strong>
-              <small>{{ syncStatusTagLabel }}</small>
-            </div>
-          </div>
-
+          <p v-if="bookTitle" class="reader-stage__book">{{ bookTitle }}</p>
+          <h1 class="reader-stage__title">{{ currentChapterTitle }}</h1>
+          <p class="reader-stage__meta reader-stage__stat">
+            {{ currentChapterPositionLabel }} · 已读 {{ progressPercentLabel }} · {{ syncStatusTagLabel }}
+          </p>
         </section>
 
         <section class="reader-paper">
@@ -124,7 +127,7 @@
           >
             <template v-if="currentChapter">
               <template
-                v-for="(block, index) in currentChapterBlocks"
+                v-for="(block, index) in visibleChapterBlocks"
                 :key="`block-${currentChapterIndex}-${index}`"
               >
                 <p
@@ -142,6 +145,13 @@
                   />
                 </figure>
               </template>
+              <!-- 超长章节分批渲染的哨兵：进入视口附近时追加下一批 -->
+              <div
+                v-if="hasMoreBlocks"
+                ref="contentSentinelRef"
+                class="reader-content__sentinel"
+                aria-hidden="true"
+              ></div>
             </template>
             <template v-else>正文载入中...</template>
           </article>
@@ -183,17 +193,14 @@
             ></div>
           </div>
 
-          <div class="reader-float__summary">
-            <span>{{ currentChapterPositionLabel }}</span>
-            <span>{{ syncStatusTagLabel }}</span>
-          </div>
-
           <div class="reader-float__actions">
-            <Button variant="outline" :disabled="!canGoPrev || chapterLoading" @click="handlePrevChapter">
+            <Button variant="outline" size="sm" :disabled="!canGoPrev || chapterLoading" @click="handlePrevChapter">
+              <ChevronLeft :size="15" :stroke-width="2" />
               上一章
             </Button>
-            <Button :disabled="!canGoNext || chapterLoading" @click="handleNextChapter">
+            <Button size="sm" :disabled="!canGoNext || chapterLoading" @click="handleNextChapter">
               下一章
+              <ChevronRight :size="15" :stroke-width="2" />
             </Button>
           </div>
         </div>
@@ -215,8 +222,8 @@
           >
             <div class="reader-drawer__header">
               <span class="reader-drawer__title">{{ drawerTitle }}</span>
-              <button type="button" class="reader-drawer__close" @click="activeDrawer = null">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <button type="button" class="reader-drawer__close" aria-label="关闭" @click="activeDrawer = null">
+                <X :size="18" :stroke-width="1.8" />
               </button>
             </div>
             <div class="reader-drawer__summary">
@@ -282,8 +289,8 @@
           <div class="reader-drawer__surface" :class="readerThemeClass">
             <div class="reader-drawer__header">
               <span class="reader-drawer__title">{{ drawerTitle }}</span>
-              <button type="button" class="reader-drawer__close" @click="activeDrawer = null">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <button type="button" class="reader-drawer__close" aria-label="关闭" @click="activeDrawer = null">
+                <X :size="18" :stroke-width="1.8" />
               </button>
             </div>
             <div class="reader-settings">
@@ -366,6 +373,7 @@ import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { useRoute, useRouter } from "vue-router";
+import { ArrowLeft, ChevronLeft, ChevronRight, Library, List, Settings, X } from "lucide-vue-next";
 
 import { booksApi } from "../api/books";
 import { ApiError, buildApiUrl, getErrorMessage, resolveApiAssetUrl } from "../api/client";
@@ -379,13 +387,21 @@ import type {
 } from "../types/api";
 import PageStatusPanel from "../components/PageStatusPanel.vue";
 import { formatPercent } from "../utils/format";
+import { buildBlockCharPrefixSums, computeMeasurableRenderedLength, resolveMountedCountForOffset } from "../utils/reader-window";
+import { createRequestGuard } from "../utils/request-guard";
 import { authTokenStorage } from "../utils/token";
 
 const PROGRESS_THROTTLE_MS = 5000;
+const PERSIST_LOCAL_DEBOUNCE_MS = 300;
+// 超长章节（如“全文”降级）分批渲染的批次大小：初始挂载一批，滚动到底部附近再追加。
+// 块数不超过该值的章节永远全量挂载，渲染路径与之前完全一致。
+const CONTENT_RENDER_BATCH_SIZE = 200;
 const READER_SCROLL_ANCHOR = 120;
 const COMPACT_BREAKPOINT = 980;
 const MOBILE_CONTENT_WIDTH_MIN_PERCENT = 84;
 const MOBILE_CONTENT_WIDTH_MAX_PERCENT = 100;
+// 目录项固定渲染高度 72px + 列表 gap 10px = 82px 步长；
+// 改 .reader-catalog__item 的高度/padding/gap 时必须同步此常量
 const CATALOG_ITEM_ESTIMATED_HEIGHT = 82;
 const CATALOG_OVERSCAN = 8;
 
@@ -458,11 +474,16 @@ const catalogListHeight = ref(0);
 const catalogJumpIndex = ref(0);
 
 let progressSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let persistLocalTimer: ReturnType<typeof setTimeout> | null = null;
+let scrollRafId: number | null = null;
 let saveInFlight = false;
 let queuedSnapshot: ProgressSnapshot | null = null;
 let lastSavedProgressKey = "";
 let suppressScrollTrackingUntil = 0;
 let catalogScrollToken = 0;
+// 切章/整页加载请求守卫：快速连点或 bookId 切换时，旧响应不得覆盖新状态。
+const chapterRequestGuard = createRequestGuard();
+const readerLoadGuard = createRequestGuard();
 
 const isCompactViewport = computed(() => viewportWidth.value <= COMPACT_BREAKPOINT);
 const shouldShowChrome = computed(() => !isCompactViewport.value || mobileChromeVisible.value);
@@ -501,6 +522,72 @@ const currentChapterContentView = computed<ReaderChapterContentView>(() => {
 });
 const currentChapterBody = computed(() => currentChapterContentView.value.body);
 const currentChapterBlocks = computed(() => buildReaderContentBlocks(currentChapterBody.value));
+// 分批渲染：visibleChapterBlocks 只包含已挂载部分；普通章节始终全量。
+const mountedBlockCount = ref(0);
+const blockCharPrefixSums = computed(() =>
+  buildBlockCharPrefixSums(
+    currentChapterBlocks.value.map((block) => (block.type === "paragraph" ? block.content.length : 0)),
+  ),
+);
+const totalBlockChars = computed(() => {
+  const sums = blockCharPrefixSums.value;
+  return sums.length > 0 ? sums[sums.length - 1] : 0;
+});
+const mountedBlockChars = computed(() =>
+  mountedBlockCount.value > 0 ? (blockCharPrefixSums.value[mountedBlockCount.value - 1] ?? 0) : 0,
+);
+const visibleChapterBlocks = computed(() => currentChapterBlocks.value.slice(0, mountedBlockCount.value));
+const hasMoreBlocks = computed(() => mountedBlockCount.value < currentChapterBlocks.value.length);
+const contentSentinelRef = ref<HTMLElement | null>(null);
+let contentSentinelObserver: IntersectionObserver | null = null;
+
+watch(currentChapterBlocks, (blocks) => {
+  // 切章后重置挂载窗口：超长章节先挂载首批，普通章节直接全量。
+  const canWindow = typeof IntersectionObserver !== "undefined";
+  mountedBlockCount.value = canWindow ? Math.min(blocks.length, CONTENT_RENDER_BATCH_SIZE) : blocks.length;
+});
+
+// 当前已挂载部分对应的可测量正文长度；全量挂载时严格等于正文长度（与旧行为一致）。
+function getMeasurableRenderedLength() {
+  return computeMeasurableRenderedLength(
+    currentChapterBody.value.length,
+    mountedBlockChars.value,
+    totalBlockChars.value,
+  );
+}
+
+function appendNextContentBatch() {
+  if (!hasMoreBlocks.value) {
+    return;
+  }
+  mountedBlockCount.value = Math.min(
+    mountedBlockCount.value + CONTENT_RENDER_BATCH_SIZE,
+    currentChapterBlocks.value.length,
+  );
+}
+
+// 恢复进度定位前，先确保目标位置所在的块已挂载。
+function ensureBlocksMountedForCharOffset(charOffset: number) {
+  const required = resolveMountedCountForOffset({
+    prefixSums: blockCharPrefixSums.value,
+    targetCharsInBody: clamp(charOffset - currentChapterTrimmedPrefixLength.value, 0, currentChapterBody.value.length),
+    renderedLength: currentChapterBody.value.length,
+    batchSize: CONTENT_RENDER_BATCH_SIZE,
+  });
+  if (required > mountedBlockCount.value) {
+    mountedBlockCount.value = required;
+  }
+}
+
+watch(contentSentinelRef, (element, previous) => {
+  if (previous && contentSentinelObserver) {
+    contentSentinelObserver.unobserve(previous);
+  }
+  if (element && contentSentinelObserver) {
+    contentSentinelObserver.observe(element);
+  }
+});
+
 const currentChapterTrimmedPrefixLength = computed(() => currentChapterContentView.value.trimmedPrefixLength);
 const currentChapterPositionLabel = computed(() => {
   if (chapters.value.length === 0) {
@@ -603,10 +690,31 @@ const catalogBottomPadding = computed(() =>
   Math.max(0, (chapters.value.length - catalogVirtualEnd.value) * CATALOG_ITEM_ESTIMATED_HEIGHT)
 );
 
+// 本地偏好 → store。store 被外部修改时由下方反向 watch 同步回来，
+// syncingPreferencesFromStore 防止两个 watch 互相触发。
+let syncingPreferencesFromStore = false;
+
 watch(
   preferences,
   (value) => {
+    if (syncingPreferencesFromStore) {
+      return;
+    }
     preferencesStore.patchReader(value);
+  },
+  { deep: true },
+);
+
+// store → 本地偏好：全局主题切换、服务端偏好回灌等外部修改后，
+// 本地副本保持同步，避免下一次本地操作把旧值整体覆盖回 store。
+watch(
+  () => preferencesStore.reader,
+  (value) => {
+    syncingPreferencesFromStore = true;
+    Object.assign(preferences, value);
+    void nextTick(() => {
+      syncingPreferencesFromStore = false;
+    });
   },
   { deep: true },
 );
@@ -700,6 +808,17 @@ onMounted(() => {
     return;
   }
 
+  if (typeof IntersectionObserver !== "undefined") {
+    contentSentinelObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          appendNextContentBatch();
+        }
+      },
+      { rootMargin: "800px 0px" },
+    );
+  }
+
   syncViewportState();
   window.addEventListener("resize", handleWindowResize, { passive: true });
   window.addEventListener("scroll", handleWindowScroll, { passive: true });
@@ -712,6 +831,21 @@ onUnmounted(() => {
   clearScheduledProgressSync();
   catalogScrollToken += 1;
   catalogItemRefs.clear();
+  contentSentinelObserver?.disconnect();
+  contentSentinelObserver = null;
+  // 使进行中的切章/加载请求失效，卸载后不得再写状态。
+  chapterRequestGuard.invalidate();
+  readerLoadGuard.invalidate();
+
+  if (scrollRafId !== null && typeof window !== "undefined") {
+    window.cancelAnimationFrame(scrollRafId);
+    scrollRafId = null;
+  }
+  if (persistLocalTimer !== null && typeof window !== "undefined") {
+    // 卸载时会直接保存当前快照（见下方），清掉防抖定时器避免旧快照覆盖。
+    window.clearTimeout(persistLocalTimer);
+    persistLocalTimer = null;
+  }
 
   if (typeof window === "undefined") {
     return;
@@ -747,9 +881,8 @@ function getLocalProgressKey(bookId: number): string {
 function saveProgressToLocal(bookId: number, snapshot: ProgressSnapshot) {
   if (typeof window === "undefined") return;
   try {
-    const payload = JSON.stringify(snapshot);
-    localStorage.setItem(getLocalProgressKey(bookId), payload);
-    sessionStorage.setItem(getLocalProgressKey(bookId), payload);
+    // 只写 localStorage；读取端保留 sessionStorage fallback 以兼容旧版本写入的数据。
+    localStorage.setItem(getLocalProgressKey(bookId), JSON.stringify(snapshot));
   } catch {
     // ignore
   }
@@ -1167,12 +1300,15 @@ function getViewportCharOffset() {
     return clamp(currentChapterTrimmedPrefixLength.value, 0, chapterLength);
   }
 
+  // 分批渲染时按已挂载部分的可测量长度换算，全量挂载时与原逻辑一致。
+  const measurableLength = getMeasurableRenderedLength();
+
   const rect = contentRef.value.getBoundingClientRect();
   const elementTop = rect.top + window.scrollY;
   const scrollableHeight = Math.max(contentRef.value.scrollHeight - window.innerHeight * 0.58, 1);
   const focusY = window.scrollY + Math.min(window.innerHeight * 0.32, 220);
   const ratio = clamp((focusY - elementTop) / scrollableHeight, 0, 1);
-  const renderedOffset = Math.round(renderedLength * ratio);
+  const renderedOffset = Math.round(measurableLength * ratio);
 
   return clamp(currentChapterTrimmedPrefixLength.value + renderedOffset, 0, chapterLength);
 }
@@ -1197,11 +1333,28 @@ function syncSessionProgressFromViewport() {
 
   hasMeaningfulReadingActivity.value = true;
   sessionProgress.value = snapshot;
-  saveProgressToLocal(props.bookId, snapshot);
+  schedulePersistLocalSnapshot(snapshot);
   scheduleProgressSync();
 }
 
+// 滚动停止 300ms 后才写 localStorage：滚动期间只更新内存态，避免每帧写存储。
+function schedulePersistLocalSnapshot(snapshot: ProgressSnapshot) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (persistLocalTimer !== null) {
+    window.clearTimeout(persistLocalTimer);
+  }
+  persistLocalTimer = window.setTimeout(() => {
+    persistLocalTimer = null;
+    saveProgressToLocal(props.bookId, snapshot);
+  }, PERSIST_LOCAL_DEBOUNCE_MS);
+}
+
 async function restoreScrollForCharOffset(charOffset: number, smoothScroll = false) {
+  // 分批渲染场景下，先确保目标位置所在的块已挂载，再计算滚动位置。
+  ensureBlocksMountedForCharOffset(charOffset);
+
   // 多轮重试，确保 DOM 和字体渲染完成后再计算 scroll 位置
   let attempts = 0;
   const maxAttempts = 5;
@@ -1226,12 +1379,13 @@ async function restoreScrollForCharOffset(charOffset: number, smoothScroll = fal
       continue;
     }
 
+    const measurableLength = getMeasurableRenderedLength();
     const adjustedCharOffset = clamp(
       charOffset - currentChapterTrimmedPrefixLength.value,
       0,
       renderedLength,
     );
-    const ratio = clamp(adjustedCharOffset / renderedLength, 0, 1);
+    const ratio = clamp(measurableLength > 0 ? adjustedCharOffset / measurableLength : 0, 0, 1);
     const rect = contentRef.value.getBoundingClientRect();
     const elementTop = rect.top + window.scrollY;
     const scrollableHeight = Math.max(
@@ -1270,6 +1424,9 @@ async function loadBookDetailSafely(bookId: number) {
 }
 
 async function loadReader() {
+  const loadId = readerLoadGuard.next();
+  // 新一轮加载使进行中的切章请求失效，避免旧章节内容覆盖新书籍状态。
+  chapterRequestGuard.invalidate();
   loading.value = true;
   pageError.value = null;
   chapterError.value = null;
@@ -1297,6 +1454,11 @@ async function loadReader() {
       chaptersPromise,
       progressPromise,
     ]);
+
+    if (!readerLoadGuard.isCurrent(loadId)) {
+      // bookId 已切换或组件已卸载，丢弃过期加载结果。
+      return;
+    }
 
     bookTitle.value = bookDetail?.title || cachedBookDetail?.title || "";
     chapters.value = chapterList;
@@ -1335,6 +1497,9 @@ async function loadReader() {
     // 如果使用了缓存，后台静默刷新最新数据
     if (cachedChapters) {
       void booksApi.chapters(props.bookId).then((fresh) => {
+        if (!readerLoadGuard.isCurrent(loadId)) {
+          return;
+        }
         chapters.value = fresh;
         booksCacheStore.set(props.bookId, { chapters: fresh });
       }).catch(() => {
@@ -1371,6 +1536,9 @@ async function loadReader() {
       restoreCharOffset,
     });
   } catch (error) {
+    if (!readerLoadGuard.isCurrent(loadId)) {
+      return;
+    }
     bookTitle.value = "";
     chapters.value = [];
     progress.value = null;
@@ -1378,7 +1546,7 @@ async function loadReader() {
     currentChapter.value = null;
     pageError.value = getErrorMessage(error);
   } finally {
-    if (loading.value) {
+    if (readerLoadGuard.isCurrent(loadId) && loading.value) {
       loading.value = false;
     }
   }
@@ -1490,11 +1658,16 @@ async function openChapter(
   }
 
   const normalizedIndex = normalizeChapterIndex(chapterIndex);
+  const requestId = chapterRequestGuard.next();
   chapterLoading.value = true;
   chapterError.value = null;
 
   try {
     const content = await booksApi.chapterContent(props.bookId, normalizedIndex);
+    if (!chapterRequestGuard.isCurrent(requestId)) {
+      // 期间已发起更新的切章请求，丢弃这个过期响应。
+      return;
+    }
     const restoreCharOffset = clamp(
       options.restoreCharOffset ?? 0,
       0,
@@ -1529,6 +1702,9 @@ async function openChapter(
       });
     }
   } catch (error) {
+    if (!chapterRequestGuard.isCurrent(requestId)) {
+      return;
+    }
     const message = getErrorMessage(error);
 
     if (!currentChapter.value) {
@@ -1537,7 +1713,9 @@ async function openChapter(
       chapterError.value = message;
     }
   } finally {
-    chapterLoading.value = false;
+    if (chapterRequestGuard.isCurrent(requestId)) {
+      chapterLoading.value = false;
+    }
   }
 }
 
@@ -1552,7 +1730,13 @@ function handleWindowScroll() {
     return;
   }
 
-  syncSessionProgressFromViewport();
+  // rAF 合并：每帧最多做一次 DOM 测量与响应式写入，避免滚动期持续 jank。
+  if (scrollRafId === null) {
+    scrollRafId = window.requestAnimationFrame(() => {
+      scrollRafId = null;
+      syncSessionProgressFromViewport();
+    });
+  }
 
   if (isCompactViewport.value && mobileChromeVisible.value && !activeDrawer.value) {
     mobileChromeVisible.value = false;
@@ -1589,8 +1773,9 @@ function handleVisibilityChange() {
     return;
   }
 
-  // 不覆盖 localStorage，避免与 saveSnapshotBeforeNavigate 竞态
-  // keepalive flushProgress 成功后会自动 clearProgressLocal
+  // 不覆盖 localStorage，避免与 saveSnapshotBeforeNavigate 竞态。
+  // 注意：keepalive 分支无法拿到响应结果，不会 clearProgressLocal；
+  // 本地备份会保留到下次加载时参与进度合并（见 loadReader 的合并策略），属预期行为。
   void flushProgress("visibilitychange", {
     keepalive: true,
     force: true,
@@ -1673,80 +1858,63 @@ function goToBookshelf() {
    --reader-paragraph-spacing: 1;
    --reader-content-width: 72ch;
   --reader-column-max: 960px;
-  --reader-side-width: 192px;
+  --reader-rail-width: 64px;
+  --reader-float-width: 200px;
   --reader-side-gap: clamp(18px, 2vw, 24px);
   --reader-page-gutter: clamp(18px, 2.2vw, 30px);
   --reader-column-width: min(
     var(--reader-column-max),
     calc(
-      100vw - (var(--reader-page-gutter) * 2) - (var(--reader-side-width) * 2) - (var(--reader-side-gap) * 2)
+      100vw - (var(--reader-page-gutter) * 2) - var(--reader-rail-width) - var(--reader-float-width) - (var(--reader-side-gap) * 2)
     )
   );
   min-height: 100dvh;
   padding: var(--reader-page-gutter);
-  /* 二次元阅读页背景：淡蓝粉光晕叠加 */
-  background:
-    radial-gradient(circle at 14% 10%, rgba(74, 159, 217, 0.14), transparent 22%),
-    radial-gradient(circle at 86% 16%, rgba(244, 164, 180, 0.12), transparent 24%),
-    radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.2), transparent 32%),
-    var(--reader-page-bg);
+  /* 沉浸阅读风：纯色纸感背景，大面积留白 */
+  background: var(--reader-page-bg);
   color: var(--reader-body);
 }
 
 .reader-page--light {
   color-scheme: light;
-  /* 二次元蓝粉配色：天空蓝到樱花粉渐变背景 */
-  --reader-page-bg: linear-gradient(180deg, #D6ECFA 0%, #F0DEE8 100%);
-  --reader-panel-bg: rgba(255, 255, 255, 0.74);
-  --reader-panel-border: rgba(74, 159, 217, 0.18);
-  --reader-panel-shadow: 0 24px 60px rgba(74, 159, 217, 0.12);
-  --reader-paper-bg:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(232, 244, 252, 0.92)),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
-  --reader-paper-border: rgba(74, 159, 217, 0.14);
-  --reader-paper-shadow: 0 30px 80px rgba(74, 159, 217, 0.12);
-  --reader-heading: #2D3A4A;
-  --reader-body: #3D4A5A;
-  --reader-muted: #7A8A9A;
-  --reader-accent: #F4A4B4;
-  --reader-progress-rail: rgba(74, 159, 217, 0.2);
-  --reader-action-bg: rgba(255, 255, 255, 0.58);
-  --reader-action-hover: rgba(255, 255, 255, 0.86);
-  --reader-settings-bg: rgba(232, 244, 252, 0.56);
-  --reader-settings-border: rgba(74, 159, 217, 0.12);
+  /* 沉浸阅读风浅色：暖纸白底 + 墨色文字 + 低饱和陶棕点缀 */
+  --reader-page-bg: #F7F4ED;
+  --reader-panel-bg: rgba(253, 251, 246, 0.78);
+  --reader-panel-border: rgba(154, 98, 56, 0.14);
+  --reader-panel-shadow: 0 16px 40px rgba(120, 96, 66, 0.1);
+  --reader-paper-bg: #FDFBF6;
+  --reader-heading: #2E2921;
+  --reader-body: #38322A;
+  --reader-muted: #6F675B;
+  --reader-accent: #9A6238;
+  --reader-progress-rail: rgba(154, 98, 56, 0.16);
+  --reader-action-bg: rgba(154, 98, 56, 0.06);
+  --reader-action-hover: rgba(154, 98, 56, 0.12);
+  --reader-settings-bg: rgba(154, 98, 56, 0.05);
+  --reader-settings-border: rgba(154, 98, 56, 0.1);
 }
 
 .reader-page--dark {
   color-scheme: dark;
   /* 纯色背景兜底，彻底消除渐变 banding 和跨设备渲染差异 */
-  background-color: #141426;
+  background-color: #14120F;
   background: var(--reader-page-bg);
-  /* 深夜花町配色：深蓝紫纯色背景，避免渐变带来的边缘渲染差异 */
-  --reader-page-bg: #1A1A2E;
-  --reader-panel-bg: rgba(37, 37, 64, 0.94);
-  /* 夜间模式下边框改为透明，彻底杜绝白线/粉线 */
-  --reader-panel-border: transparent;
-  --reader-panel-shadow: 0 24px 64px rgba(0, 0, 0, 0.38);
-  --reader-paper-bg: #1E1E32;
-  --reader-paper-border: transparent;
-  --reader-paper-shadow: 0 34px 88px rgba(0, 0, 0, 0.42);
-  --reader-heading: #FFF0F3;
-  --reader-body: #D8D8E8;
-  --reader-muted: #A0A0C0;
-  --reader-accent: #FF8FAB;
-  --reader-progress-rail: rgba(255, 255, 255, 0.12);
-  --reader-action-bg: rgba(255, 255, 255, 0.04);
-  --reader-action-hover: rgba(255, 255, 255, 0.08);
-  --reader-settings-bg: rgba(255, 143, 171, 0.04);
-  --reader-settings-border: transparent;
-}
-
-.reader-page--dark .reader-progress-bar {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.reader-page--dark .reader-progress-bar__fill {
-  background: #ffffff;
+  /* 沉浸阅读风深色：暖炭底 + 暖灰文字 + 暖檀点缀 */
+  --reader-page-bg: #14120F;
+  --reader-panel-bg: rgba(38, 34, 28, 0.88);
+  /* 夜间模式下边框改为透明，彻底杜绝白线 */
+  --reader-panel-border: rgba(210, 155, 108, 0.1);
+  --reader-panel-shadow: 0 20px 56px rgba(0, 0, 0, 0.4);
+  --reader-paper-bg: #1C1915;
+  --reader-heading: #EDE5D8;
+  --reader-body: #D9CEBB;
+  --reader-muted: #A79B8A;
+  --reader-accent: #D29B6C;
+  --reader-progress-rail: rgba(210, 155, 108, 0.16);
+  --reader-action-bg: rgba(210, 155, 108, 0.06);
+  --reader-action-hover: rgba(210, 155, 108, 0.12);
+  --reader-settings-bg: rgba(210, 155, 108, 0.05);
+  --reader-settings-border: rgba(210, 155, 108, 0.1);
 }
 
 .reader-page--dark .reader-glass {
@@ -1759,7 +1927,7 @@ function goToBookshelf() {
 
 .reader-loading {
   display: grid;
-  grid-template-columns: var(--reader-side-width) minmax(0, var(--reader-column-width)) var(--reader-side-width);
+  grid-template-columns: var(--reader-rail-width) minmax(0, var(--reader-column-width)) var(--reader-float-width);
   justify-content: center;
   gap: var(--reader-side-gap);
   align-items: start;
@@ -1777,7 +1945,7 @@ function goToBookshelf() {
 
 .reader-glass {
   border: 1px solid var(--reader-panel-border);
-  border-radius: 28px;
+  border-radius: 18px;
   background: var(--reader-panel-bg);
   box-shadow: var(--reader-panel-shadow);
   backdrop-filter: blur(18px);
@@ -1792,27 +1960,10 @@ function goToBookshelf() {
   max-width: var(--reader-column-width);
   margin: 0 auto;
   padding: clamp(28px, 4vw, 54px);
-  border: 1px solid var(--reader-paper-border);
-  border-radius: 34px;
+  border: none;
+  border-radius: 12px;
   background: var(--reader-paper-bg);
   background-clip: padding-box;
-  box-shadow: var(--reader-paper-shadow);
-  /* 强制 GPU 层，消除移动端 border-radius 边缘抗锯齿产生的亮线 */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-}
-
-/* 只在日间模式下显示纸张顶部高光，避免夜间模式白线 */
-.reader-page--light .reader-paper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 18%),
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.12), transparent 28%);
-  pointer-events: none;
-  /* 确保伪元素也应用 GPU 层，避免合成差异 */
-  transform: translateZ(0);
 }
 
 .reader-page__alert {
@@ -1829,13 +1980,13 @@ function goToBookshelf() {
 }
 
 .reader-rail {
-  left: calc(50% - (var(--reader-column-width) / 2) - var(--reader-side-width) - var(--reader-side-gap));
-  width: var(--reader-side-width);
+  left: calc(50% - (var(--reader-column-width) / 2) - var(--reader-rail-width) - var(--reader-side-gap));
+  width: var(--reader-rail-width);
 }
 
 .reader-float {
   left: calc(50% + (var(--reader-column-width) / 2) + var(--reader-side-gap));
-  width: var(--reader-side-width);
+  width: var(--reader-float-width);
 }
 
 .reader-rail__panel,
@@ -1851,8 +2002,14 @@ function goToBookshelf() {
   overflow-y: auto;
 }
 
+.reader-rail__panel {
+  padding: 8px;
+  gap: 4px;
+  align-items: center;
+  border-radius: 999px;
+}
+
 .reader-rail__panel,
-.reader-rail__brand,
 .reader-rail__actions,
 .reader-rail__action,
 .reader-float__panel,
@@ -1860,88 +2017,38 @@ function goToBookshelf() {
   min-width: 0;
 }
 
-.reader-rail__brand {
-  display: grid;
-  gap: 6px;
-}
-
-.reader-eyebrow {
-  display: inline-flex;
-  width: fit-content;
-  max-width: 100%;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--reader-accent) 16%, transparent);
-  color: var(--reader-accent);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.reader-rail__chapter {
-  color: var(--reader-heading);
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-.reader-rail__sync {
-  color: var(--reader-muted);
-  font-size: 12px;
-}
-
 .reader-rail__actions,
 .reader-float__actions {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
+}
+
+.reader-float__actions {
+  gap: 8px;
 }
 
 .reader-rail__action {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
+  width: 44px;
+  height: 44px;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 12px 14px;
-  border: 1px solid transparent;
-  border-radius: 18px;
-  background: var(--reader-action-bg);
-  color: inherit;
-  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--reader-muted);
   cursor: pointer;
   transition:
-    transform 180ms ease,
     background 180ms ease,
-    border-color 180ms ease;
+    color 180ms ease;
 }
 
 .reader-rail__action:hover {
-  transform: translateY(-1px);
   background: var(--reader-action-hover);
-  border-color: color-mix(in srgb, var(--reader-accent) 22%, transparent);
-}
-
-.reader-rail__action strong,
-.reader-rail__action span {
-  width: 100%;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-.reader-rail__action strong {
-  color: var(--reader-heading);
-  font-size: 15px;
-}
-
-.reader-rail__action span {
-  color: var(--reader-muted);
-  font-size: 12px;
-  line-height: 1.5;
+  color: var(--reader-accent);
 }
 
 .reader-stage {
@@ -1956,57 +2063,37 @@ function goToBookshelf() {
   max-width: var(--reader-column-width);
   margin: 0 auto;
   display: grid;
-  gap: 14px;
+  gap: 10px;
   padding-top: 20px;
 }
 
-.reader-stage__header {
-  display: flex;
-  justify-content: space-between;
-  gap: 24px;
-  align-items: end;
-}
-
-.reader-stage__chapter {
+.reader-stage__book {
   margin: 0;
   color: var(--reader-muted);
-  font-size: 14px;
-}
-
-.reader-stage__book {
-  margin: 0 0 8px;
-  color: var(--reader-muted);
   font-size: 13px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .reader-stage__title {
-  margin: 10px 0 0;
+  margin: 0;
   color: var(--reader-heading);
   font-family: var(--font-display);
-  font-size: clamp(34px, 5vw, 62px);
-  line-height: 1.02;
+  font-size: clamp(26px, 3.4vw, 38px);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  text-wrap: balance;
 }
 
-.reader-stage__stat {
-  min-width: 160px;
-  display: grid;
-  gap: 4px;
-  justify-items: end;
-}
-
-.reader-stage__stat span,
-.reader-stage__stat small,
-.reader-drawer__summary p,
-.reader-float__summary {
+.reader-stage__meta {
+  margin: 2px 0 0;
   color: var(--reader-muted);
+  font-size: 13px;
+  letter-spacing: 0.02em;
 }
 
-.reader-stage__stat strong {
-  color: var(--reader-heading);
-  font-size: clamp(28px, 4vw, 40px);
-  line-height: 1;
+.reader-drawer__summary p {
+  color: var(--reader-muted);
 }
 
 .reader-drawer__summary {
@@ -2063,15 +2150,20 @@ function goToBookshelf() {
   margin: 0;
 }
 
+.reader-content__sentinel {
+  height: 1px;
+  margin-top: calc(var(--reader-font-size) * var(--reader-line-height) * var(--reader-paragraph-spacing));
+}
+
 .reader-content__image {
   display: block;
   width: auto;
   max-width: 100%;
   max-height: min(72dvh, 960px);
   margin: 0 auto;
-  border-radius: 22px;
+  border-radius: 10px;
   object-fit: contain;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 12px 32px rgba(120, 96, 66, 0.12);
 }
 
 .reader-content--dimmed {
@@ -2086,7 +2178,7 @@ function goToBookshelf() {
 .reader-paper__chapter-nav {
   margin-top: 28px;
   padding-top: 18px;
-  border-top: 1px solid color-mix(in srgb, var(--reader-paper-border) 88%, transparent);
+  border-top: 1px solid var(--reader-settings-border);
 }
 
 .reader-paper__chapter-actions {
@@ -2096,19 +2188,12 @@ function goToBookshelf() {
 }
 
 .reader-float__panel {
-  gap: 16px;
+  gap: 14px;
 }
 
 .reader-float__stat {
   display: grid;
   gap: 6px;
-}
-
-.reader-float__summary {
-  display: grid;
-  gap: 4px;
-  font-size: 13px;
-  line-height: 1.7;
 }
 
 .reader-drawer__summary {
@@ -2185,11 +2270,11 @@ function goToBookshelf() {
 }
 
 .reader-page--light .reader-catalog__list {
-  scrollbar-color: rgba(74, 159, 217, 0.5) transparent;
+  scrollbar-color: rgba(154, 98, 56, 0.4) transparent;
 }
 
 .reader-page--dark .reader-catalog__list {
-  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+  scrollbar-color: rgba(210, 155, 108, 0.35) transparent;
 }
 
 .reader-catalog__list::-webkit-scrollbar {
@@ -2211,55 +2296,57 @@ function goToBookshelf() {
 }
 
 .reader-page--light .reader-catalog__list::-webkit-scrollbar-thumb {
-  background: rgba(74, 159, 217, 0.5);
+  background: rgba(154, 98, 56, 0.4);
   border-radius: 999px;
 }
 
 .reader-page--light .reader-catalog__list::-webkit-scrollbar-thumb:hover {
-  background: rgba(74, 159, 217, 0.7);
+  background: rgba(154, 98, 56, 0.6);
 }
 
 .reader-page--dark .reader-catalog__list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(210, 155, 108, 0.35);
   border-radius: 999px;
 }
 
 .reader-page--dark .reader-catalog__list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(210, 155, 108, 0.55);
 }
 
 .reader-catalog__item {
   display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-  border: 1px solid var(--reader-panel-border);
-  border-radius: 18px;
+  /* 固定高度：与 CATALOG_ITEM_ESTIMATED_HEIGHT(82) = 72 + 列表 gap(10) 严格一致，
+     虚拟滚动的窗口/padding/定位都按 82px 步长计算，高度不一致会导致内容跳动 */
+  height: 72px;
+  align-content: center;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--reader-settings-border);
+  border-radius: 12px;
   background: transparent;
   color: inherit;
   text-align: left;
   cursor: pointer;
   transition:
-    transform 180ms ease,
     border-color 180ms ease,
     background 180ms ease;
 }
 
 .reader-catalog__item:hover {
-  transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--reader-accent) 24%, transparent);
-  background: color-mix(in srgb, var(--reader-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--reader-accent) 7%, transparent);
 }
 
 .reader-catalog__item--active {
-  border-color: color-mix(in srgb, var(--reader-accent) 28%, transparent);
-  background: color-mix(in srgb, var(--reader-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--reader-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--reader-accent) 11%, transparent);
 }
 
 .reader-catalog__jump {
   margin-top: 16px;
   padding: 14px 16px;
-  border: 1px solid var(--reader-panel-border);
-  border-radius: 16px;
+  border: 1px solid var(--reader-settings-border);
+  border-radius: 12px;
   background: var(--reader-settings-bg);
 }
 
@@ -2285,11 +2372,15 @@ function goToBookshelf() {
 .reader-catalog__index {
   color: var(--reader-muted);
   font-size: 12px;
+  line-height: 1.2;
 }
 
 .reader-catalog__title {
+  overflow: hidden;
   color: var(--reader-heading);
-  line-height: 1.6;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .reader-settings {
@@ -2301,9 +2392,9 @@ function goToBookshelf() {
   display: grid;
   gap: 14px;
   padding: 18px;
-  border: 1px solid var(--reader-panel-border);
-  border-radius: 22px;
-  background: transparent;
+  border: 1px solid var(--reader-settings-border);
+  border-radius: 14px;
+  background: var(--reader-settings-bg);
 }
 
 .reader-settings__label-row {
@@ -2330,23 +2421,18 @@ function goToBookshelf() {
 
 @media (max-width: 1320px) {
   .reader-page {
-    --reader-side-width: 184px;
+    --reader-float-width: 188px;
     --reader-side-gap: 18px;
   }
 }
 
 @media (max-width: 1120px) {
   .reader-page {
-    --reader-side-width: 168px;
+    --reader-float-width: 176px;
   }
 
-  .reader-rail__panel,
   .reader-float__panel {
     padding: 14px;
-  }
-
-  .reader-rail__action {
-    padding: 11px 12px;
   }
 }
 
@@ -2386,11 +2472,7 @@ function goToBookshelf() {
     padding: 26px 18px 0;
   }
 
-  .reader-stage__header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
+  /* 移动端隐藏顶部进度信息块，进度计算与同步不受影响 */
   .reader-stage__stat {
     display: none;
   }
@@ -2398,7 +2480,6 @@ function goToBookshelf() {
   .reader-paper {
     margin: 0 10px;
     padding: 26px 20px 30px;
-    border-radius: 30px;
   }
 
   .reader-float {
@@ -2410,13 +2491,18 @@ function goToBookshelf() {
     top: 14px;
     left: 14px;
     z-index: 30;
-    width: min(260px, calc(100vw - 28px));
+    width: auto;
     opacity: 0;
     pointer-events: none;
     transform: translateY(-10px);
     transition:
       opacity 180ms ease,
       transform 180ms ease;
+  }
+
+  .reader-rail__panel,
+  .reader-rail__actions {
+    flex-direction: row;
   }
 
   .reader-rail--active {
@@ -2428,7 +2514,7 @@ function goToBookshelf() {
 
 @media (max-width: 720px) {
   .reader-stage__title {
-    font-size: clamp(30px, 8vw, 42px);
+    font-size: clamp(24px, 7vw, 32px);
   }
 
   .reader-content {
@@ -2450,7 +2536,7 @@ function goToBookshelf() {
 .reader-drawer__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(28, 25, 21, 0.42);
 }
 
 .reader-drawer__panel {
@@ -2459,6 +2545,7 @@ function goToBookshelf() {
   left: 0;
   height: 100%;
   overflow-y: auto;
+  border-right: 1px solid var(--reader-panel-border);
   background: var(--reader-panel-bg);
 }
 
@@ -2488,7 +2575,7 @@ function goToBookshelf() {
 
 .reader-progress-bar {
   width: 100%;
-  height: 6px;
+  height: 4px;
   border-radius: 999px;
   background: var(--reader-progress-rail);
   overflow: hidden;
