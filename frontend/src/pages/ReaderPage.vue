@@ -103,7 +103,7 @@
         <section class="reader-stage__hero">
           <p v-if="bookTitle" class="reader-stage__book">{{ bookTitle }}</p>
           <h1 class="reader-stage__title">{{ currentChapterTitle }}</h1>
-          <p class="reader-stage__meta">
+          <p class="reader-stage__meta reader-stage__stat">
             {{ currentChapterPositionLabel }} · 已读 {{ progressPercentLabel }} · {{ syncStatusTagLabel }}
           </p>
         </section>
@@ -2283,6 +2283,11 @@ function goToBookshelf() {
 
   .reader-stage__hero {
     padding: 26px 18px 0;
+  }
+
+  /* 移动端隐藏顶部进度信息块，进度计算与同步不受影响 */
+  .reader-stage__stat {
+    display: none;
   }
 
   .reader-paper {

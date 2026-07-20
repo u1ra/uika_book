@@ -6,23 +6,25 @@
       :subtitle="`共 ${displayedBooks.length} 本藏书 · 按分组、排序和关键词找到下一次继续阅读的位置。`"
     >
       <template #actions>
-        <Button variant="ghost" size="sm" :disabled="loading" @click="handleRefresh">刷新</Button>
-        <Button variant="ghost" size="sm" :disabled="groupMutationPending" @click="groupManagerVisible = true">
-          分组管理
-        </Button>
-        <Button variant="outline" size="sm" @click="toggleEditMode">
-          {{ isEditMode ? "完成" : "编辑" }}
-        </Button>
-        <input
-          ref="fileInputRef"
-          type="file"
-          accept=".txt,text/plain"
-          class="sr-only"
-          @change="handleFileUpload"
-        />
-        <Button variant="default" size="sm" :disabled="uploading" @click="fileInputRef?.click()">
-          {{ uploading ? "上传中…" : "上传 TXT" }}
-        </Button>
+        <div class="bookshelf-page__header-actions">
+          <Button variant="ghost" size="sm" :disabled="loading" @click="handleRefresh">刷新</Button>
+          <Button variant="ghost" size="sm" :disabled="groupMutationPending" @click="groupManagerVisible = true">
+            分组管理
+          </Button>
+          <Button variant="outline" size="sm" @click="toggleEditMode">
+            {{ isEditMode ? "完成" : "编辑" }}
+          </Button>
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept=".txt,text/plain"
+            class="sr-only"
+            @change="handleFileUpload"
+          />
+          <Button variant="default" size="sm" :disabled="uploading" @click="fileInputRef?.click()">
+            {{ uploading ? "上传中…" : "上传 TXT" }}
+          </Button>
+        </div>
       </template>
     </PageHeader>
 
@@ -580,6 +582,15 @@ onUnmounted(() => {
   margin: 0 auto;
   display: grid;
   gap: var(--space-5);
+}
+
+/* 工具区保持单行横向排列，空间不足时横向滚动，避免操作项被拆散 */
+.bookshelf-page__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
 }
 
 /* 分组筛选：下划线式 tab */

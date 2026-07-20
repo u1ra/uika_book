@@ -2,6 +2,42 @@
 
 本文记录面向使用者的主要变化。历史版本中的运行地址和构建产物哈希不再保留；当前部署方式以 [README.md](./README.md) 和仓库配置为准。
 
+## v1.14 — 2026-07-20
+
+本版对整个前端进行“沉浸阅读风”UI/交互重设计（参考微信读书 / Apple Books），并修复章节目录虚拟滚动的文字抖动问题。后端 API、数据库结构、章节加载方式和阅读进度字段语义均未改变。
+
+### 全站视觉重设计
+
+- 配色从天空蓝/樱花粉更换为低饱和暖色系：浅色为暖纸白底 + 墨色文字 + 陶棕主色，深色为暖灰黑底 + 暖檀主色。
+- 设计 token 仍集中在 `styles/index.css`，token 名称不变，组件层通过变量整体换肤；暗色继续由 `body.app-theme--dark` 驱动。
+- 登录页改为居中双栏纯排版 + 暖白软面板；应用顶栏瘦身，导航改为下划线文字链接。
+- 书架页改为横向书籍卡片与下划线分组筛选；详情页 Hero 纯排版、信息卡统一细边框分区。
+- 规则管理页三处桌面表格/移动卡片双模板合并为单一响应式卡片列表。
+- 阅读页仅做视觉更新：正文去卡片边框、窄栏纯排版，左侧工具栏改为纤细图标栏，右侧浮窗精简为进度条 + 上下章。**滚动模型、进度同步链路、定位几何零改动**。
+- 主题切换从导航栏拆出，改为用户菜单旁的独立图标按钮（日/月图标）。
+
+### 章节目录抖动修复
+
+- 修复目录虚拟滚动估算步长（82px）与实际条目渲染高度（约 90px）不一致导致的内容反复校正、文字跳动。
+- 目录条目改为固定 72px 高度（长标题单行省略），与列表间距之和严格等于估算步长。
+- 在 `CATALOG_ITEM_ESTIMATED_HEIGHT` 旁补充注释：修改目录条目样式必须同步该常量。
+
+### 共享层与死代码
+
+- 新增共享组件 `BookCover`、`ProgressBar`、`PageHeader`，扩展 `PageStatusPanel` 为空/错误/加载三态。
+- 新增 composables：`useContinueReading`（继续阅读跳转）、`useAsyncAction`（CRUD 操作模板）。
+- 移除无使用方的 `PagePlaceholder`、`ui/tabs`、`ui/separator`、`ui/card` 及 `index.css` 中失效的暗色覆盖。
+- 手写 resize 监听统一改用 `@vueuse/core` 的 `useMediaQuery`；`tailwind.config.js` 的圆角、颜色 fallback 与全局 token 对齐，`darkMode` 指向 `body.app-theme--dark`。
+- PWA 主题色同步更新：`index.html`、`vite.config.ts`、`app-theme.ts`、全局兜底背景及用户主题色默认值（陶棕）。
+
+### 验证与部署
+
+- `npm run typecheck`：通过。
+- `npm run build`：通过，PWA 产物正常生成。
+- `node frontend/scripts/verify-ui-fixes.mjs` 与 `verify-reader-page-layout.mjs`：通过；回归中暴露的书架工具区单行约束、移动端阅读页顶部进度块隐藏两项行为已按原约束补齐。
+- `docker compose up -d --build`：通过，同源入口与 `/health` 返回 `200`。
+- Docker 数据卷未改动，书籍、规则与阅读进度数据保持不变。
+
 ## v1.13 — 2026-07-18
 
 本版修复目录规则页面新增、编辑自定义规则时不显示保存按钮的问题，并完善小屏弹窗布局与保存完成后的状态收尾。后端 API、数据库结构、目录解析逻辑和字段语义均未改变。
