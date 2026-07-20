@@ -24,9 +24,9 @@
           </div>
 
           <div class="chapter-catalog-panel__body">
-            <div v-if="chapters.length === 0" class="chapter-catalog-panel__empty flex flex-col items-center justify-center py-8 text-gray-500">
+            <div v-if="chapters.length === 0" class="chapter-catalog-panel__empty">
               <p>当前还没有可展示的目录</p>
-              <p class="text-sm">请稍后再试或重新解析目录。</p>
+              <p class="chapter-catalog-panel__empty-sub">请稍后再试或重新解析目录。</p>
             </div>
 
             <div v-else class="chapter-catalog-list">
@@ -42,7 +42,7 @@
                 </span>
                 <strong class="chapter-catalog-list__title">{{ chapter.chapter_title }}</strong>
                 <span class="chapter-catalog-list__meta">
-                  范围 {{ formatNumber(chapter.start_offset) }} - {{ formatNumber(chapter.end_offset) }}
+                  {{ formatNumber(chapter.start_offset) }} - {{ formatNumber(chapter.end_offset) }}
                 </span>
               </button>
             </div>
@@ -73,9 +73,9 @@
         </div>
 
         <div class="chapter-catalog-panel__body">
-          <div v-if="chapters.length === 0" class="chapter-catalog-panel__empty flex flex-col items-center justify-center py-8 text-gray-500">
+          <div v-if="chapters.length === 0" class="chapter-catalog-panel__empty">
             <p>当前还没有可展示的目录</p>
-            <p class="text-sm">请稍后再试或重新解析目录。</p>
+            <p class="chapter-catalog-panel__empty-sub">请稍后再试或重新解析目录。</p>
           </div>
 
           <div v-else class="chapter-catalog-list">
@@ -91,7 +91,7 @@
               </span>
               <strong class="chapter-catalog-list__title">{{ chapter.chapter_title }}</strong>
               <span class="chapter-catalog-list__meta">
-                范围 {{ formatNumber(chapter.start_offset) }} - {{ formatNumber(chapter.end_offset) }}
+                {{ formatNumber(chapter.start_offset) }} - {{ formatNumber(chapter.end_offset) }}
               </span>
             </button>
           </div>
@@ -102,7 +102,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed } from "vue";
+import { useMediaQuery, useWindowSize } from "@vueuse/core";
 import {
   Dialog,
   DialogContent,
@@ -112,8 +113,6 @@ import {
 
 import type { BookChapter } from "../types/api";
 import { formatNumber } from "../utils/format";
-
-const MOBILE_BREAKPOINT = 720;
 
 const props = defineProps<{
   show: boolean;
@@ -127,43 +126,11 @@ const emit = defineEmits<{
   select: [chapterIndex: number];
 }>();
 
-const viewportWidth = ref(
-  typeof window === "undefined" ? MOBILE_BREAKPOINT + 1 : window.innerWidth,
-);
+const isCompactViewport = useMediaQuery("(max-width: 720px)");
+const { width: viewportWidth } = useWindowSize();
 
-const isCompactViewport = computed(() => viewportWidth.value <= MOBILE_BREAKPOINT);
 const drawerWidth = computed(() => Math.min(Math.max(viewportWidth.value, 320), 420));
 const chapterCountLabel = computed(() => `共 ${formatNumber(props.chapterCount)} 章`);
-
-onMounted(() => {
-  syncViewportWidth();
-
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.addEventListener("resize", handleWindowResize, { passive: true });
-});
-
-onUnmounted(() => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.removeEventListener("resize", handleWindowResize);
-});
-
-function syncViewportWidth() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  viewportWidth.value = window.innerWidth;
-}
-
-function handleWindowResize() {
-  syncViewportWidth();
-}
 
 function handleShowChange(value: boolean) {
   emit("update:show", value);
@@ -225,29 +192,28 @@ function formatChapterOrdinal(index: number) {
 
 .chapter-catalog-panel {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
+/* Summary: 纯排版，无卡片 */
 .chapter-catalog-panel__summary {
   display: grid;
-  gap: 10px;
-  padding: 18px 20px;
-  border: 1px solid var(--border-color-soft);
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at top right, rgba(74, 159, 217, 0.16), transparent 34%),
-    linear-gradient(135deg, var(--surface-raised), var(--surface-soft));
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color-soft);
 }
 
 .chapter-catalog-panel__heading {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  align-items: center;
+  align-items: baseline;
 }
 
 .chapter-catalog-panel__heading strong {
-  font-size: 22px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
 }
 
 .chapter-catalog-panel__count {
@@ -262,35 +228,27 @@ function formatChapterOrdinal(index: number) {
 }
 
 .chapter-catalog-panel__book {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.6;
 }
 
 .chapter-catalog-panel__hint {
   color: var(--text-secondary);
+  font-size: 13px;
   line-height: 1.7;
 }
 
 .chapter-catalog-panel__body {
   max-height: min(62vh, 560px);
   overflow: auto;
-  padding-right: 12px;
-  scrollbar-width: auto;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
 }
 
 .chapter-catalog-panel__body::-webkit-scrollbar {
-  width: 14px;
-}
-
-.chapter-catalog-panel__body::-webkit-scrollbar-thumb:vertical {
-  min-height: 48px;
-}
-
-@media (hover: none) {
-  .chapter-catalog-panel__body::-webkit-scrollbar {
-    width: 16px;
-  }
+  width: 10px;
 }
 
 .chapter-catalog-panel__body::-webkit-scrollbar-track {
@@ -298,12 +256,12 @@ function formatChapterOrdinal(index: number) {
 }
 
 .chapter-catalog-panel__body::-webkit-scrollbar-thumb {
-  background: rgba(74, 159, 217, 0.5);
+  background: var(--border-color);
   border-radius: 999px;
 }
 
 .chapter-catalog-panel__body::-webkit-scrollbar-thumb:hover {
-  background: rgba(74, 159, 217, 0.7);
+  background: var(--primary-color);
 }
 
 .chapter-catalog-panel--drawer .chapter-catalog-panel__body {
@@ -311,62 +269,86 @@ function formatChapterOrdinal(index: number) {
 }
 
 .chapter-catalog-panel__empty {
-  padding: 28px 0;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 32px 0;
+  color: var(--text-secondary);
+  text-align: center;
 }
 
+.chapter-catalog-panel__empty p {
+  margin: 0;
+}
+
+.chapter-catalog-panel__empty-sub {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+/* 章节条目：简洁行，hover 高亮 */
 .chapter-catalog-list {
   display: grid;
-  gap: 10px;
+  gap: 2px;
 }
 
 .chapter-catalog-list__item {
   width: 100%;
   display: grid;
-  gap: 6px;
-  padding: 16px 18px;
-  border: 1px solid var(--border-color-soft);
-  border-radius: 18px;
-  background: var(--surface-panel-bg);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "index meta"
+    "title title";
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: transparent;
   text-align: left;
   cursor: pointer;
-  transition:
-    transform 160ms ease,
-    box-shadow 160ms ease,
-    border-color 160ms ease,
-    background 160ms ease;
+  transition: background 160ms ease;
 }
 
 .chapter-catalog-list__item:hover {
-  transform: translateY(-1px);
-  border-color: var(--border-color);
-  box-shadow: var(--shadow-soft);
   background: var(--surface-panel-soft-bg);
 }
 
 .chapter-catalog-list__item:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent-color) 72%, white 28%);
-  outline-offset: 2px;
+  outline: 2px solid var(--primary-color);
+  outline-offset: 1px;
 }
 
-.chapter-catalog-list__index,
-.chapter-catalog-list__meta {
+.chapter-catalog-list__index {
+  grid-area: index;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12px;
+}
+
+.chapter-catalog-list__meta {
+  grid-area: meta;
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  opacity: 0.85;
 }
 
 .chapter-catalog-list__title {
-  font-size: 16px;
-  line-height: 1.65;
+  grid-area: title;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.7;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 720px) {
-  .chapter-catalog-panel__summary {
-    padding: 16px 18px;
-  }
-
   .chapter-catalog-panel__heading {
     align-items: flex-start;
     flex-direction: column;
+    gap: 2px;
   }
 
   .chapter-catalog-panel__body {

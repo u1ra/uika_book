@@ -1,6 +1,7 @@
 <template>
   <section class="page-status-panel" :class="`page-status-panel--${variant}`">
-    <div class="page-status-panel__badge">{{ badgeLabel }}</div>
+    <div v-if="variant === 'loading'" class="page-status-panel__spinner" aria-hidden="true" />
+    <div v-else class="page-status-panel__badge">{{ badgeLabel }}</div>
     <h2 class="page-status-panel__title">{{ title }}</h2>
     <p class="page-status-panel__description">{{ description }}</p>
     <div v-if="$slots.action" class="page-status-panel__actions">
@@ -14,7 +15,7 @@ import { computed } from "vue";
 
 const props = withDefaults(
   defineProps<{
-    variant?: "empty" | "error";
+    variant?: "empty" | "error" | "loading";
     title: string;
     description: string;
   }>(),
@@ -34,11 +35,10 @@ const badgeLabel = computed(() => {
   justify-items: center;
   gap: 14px;
   padding: clamp(28px, 5vw, 44px);
-  border: 1px solid var(--border-color);
-  border-radius: 28px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-xl);
   text-align: center;
-  background: color-mix(in srgb, var(--surface-color) 94%, white 6%);
-  box-shadow: var(--surface-shadow);
+  background: var(--surface-color);
 }
 
 .page-status-panel__badge {
@@ -52,13 +52,28 @@ const badgeLabel = computed(() => {
 }
 
 .page-status-panel--empty .page-status-panel__badge {
-  background: rgba(244, 164, 180, 0.16);
+  background: var(--primary-soft);
   color: var(--primary-color);
 }
 
 .page-status-panel--error .page-status-panel__badge {
-  background: rgba(255, 107, 107, 0.12);
-  color: #e05555;
+  background: var(--alert-destructive-bg);
+  color: var(--alert-destructive-text);
+}
+
+.page-status-panel__spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--primary-soft);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: page-status-panel-spin 0.9s linear infinite;
+}
+
+@keyframes page-status-panel-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .page-status-panel__title {

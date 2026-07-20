@@ -1,224 +1,158 @@
-﻿<template>
+<template>
   <div class="rule-page">
-    <section class="rule-page__intro-stack">
-      <section class="rule-page__hero">
-        <div class="rule-page__hero-copy">
-          <div class="rule-page__eyebrow">Chapter Rules</div>
-          <h1 class="rule-page__title">把章节识别规则做成真正可管理、可验证的资产。</h1>
-          <p class="rule-page__description">
-            这里统一管理内置规则和你的自定义规则。你可以新增、编辑、删除自定义规则，快速切换默认规则，并直接在页面里验证规则是否真的匹配预期章节。
-          </p>
-        </div>
+    <PageHeader
+      eyebrow="Chapter Rules"
+      title="目录规则"
+      subtitle="统一管理内置规则与自定义规则：验证章节识别效果、切换默认规则，并把规则应用到具体书籍。"
+    >
+      <template #actions>
+        <Button variant="outline" :disabled="loading" @click="loadInitialData">刷新页面</Button>
+        <Button @click="openCreateModal">新增自定义规则</Button>
+      </template>
+    </PageHeader>
 
-        <div class="rule-page__hero-aside">
-          <div class="rule-page__stats">
-            <div class="rule-page__stat">
-              <span>规则总数</span>
-              <strong>{{ rules.length }}</strong>
-            </div>
-            <div class="rule-page__stat">
-              <span>内置规则</span>
-              <strong>{{ builtInRules.length }}</strong>
-            </div>
-            <div class="rule-page__stat">
-              <span>自定义规则</span>
-              <strong>{{ customRules.length }}</strong>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="rule-page__toolbar">
-        <div class="rule-page__toolbar-note">
-          <span>当前默认规则</span>
-          <strong>{{ defaultRuleName }}</strong>
-        </div>
-
-        <div class="rule-page__toolbar-actions">
-          <Button variant="outline" :disabled="loading" @click="loadInitialData">刷新页面</Button>
-          <Button @click="openCreateModal">新增自定义规则</Button>
-        </div>
-      </section>
-    </section>
+    <div class="rule-page__stats">
+      <div class="rule-page__stat">
+        <span class="rule-page__stat-label">规则总数</span>
+        <strong class="rule-page__stat-value">{{ rules.length }}</strong>
+      </div>
+      <div class="rule-page__stat">
+        <span class="rule-page__stat-label">内置规则</span>
+        <strong class="rule-page__stat-value">{{ builtInRules.length }}</strong>
+      </div>
+      <div class="rule-page__stat">
+        <span class="rule-page__stat-label">自定义规则</span>
+        <strong class="rule-page__stat-value">{{ customRules.length }}</strong>
+      </div>
+      <div class="rule-page__stat">
+        <span class="rule-page__stat-label">默认规则</span>
+        <strong class="rule-page__stat-value rule-page__stat-value--text">{{ defaultRuleName }}</strong>
+      </div>
+    </div>
 
     <Alert v-if="pageError" variant="destructive" class="rule-page__alert">
       {{ pageError }}
     </Alert>
 
-    <div class="rule-page__table-card">
-      <div class="rule-page__card-header">
+    <!-- 规则列表 -->
+    <section class="rule-page__card">
+      <header class="rule-page__card-header">
         <span class="rule-page__card-title">规则列表</span>
-        <span class="rule-page__card-subtitle">表格 + 弹窗表单</span>
-      </div>
+        <span class="rule-page__card-subtitle">内置与自定义规则，可设为默认或带入下方测试</span>
+      </header>
 
-      <div v-if="!loading && rules.length === 0" class="flex flex-col items-center justify-center py-16 text-gray-500">
-        <p>还没有可展示的规则</p>
-      </div>
+      <div class="rule-page__card-body">
+        <div v-if="loading" class="rule-list" aria-label="规则加载中">
+          <Skeleton v-for="i in 3" :key="i" class="h-32 w-full" />
+        </div>
 
-      <div v-else-if="isMobileViewport" class="rule-mobile-list" aria-label="规则卡片列表">
-        <article
-          v-for="rule in rules"
-          :key="`mobile-rule-${rule.id}`"
-          class="rule-mobile-card"
-        >
-          <div class="rule-mobile-card__header">
-            <div class="rule-mobile-card__title-block">
-              <strong class="rule-mobile-card__title">{{ rule.rule_name }}</strong>
-              <span class="rule-mobile-card__time">{{ formatDate(rule.updated_at) }}</span>
-            </div>
+        <PageStatusPanel
+          v-else-if="rules.length === 0"
+          variant="empty"
+          title="还没有可展示的规则"
+          description="点击右上角“新增自定义规则”创建第一条规则，或刷新页面重试。"
+        />
 
-            <div class="rule-mobile-card__badges">
-              <Badge variant="secondary">{{ rule.is_builtin ? "内置" : "自定义" }}</Badge>
-              <Badge v-if="rule.is_default" variant="default">当前默认</Badge>
-            </div>
-          </div>
-
-          <div class="rule-mobile-card__section">
-            <span class="rule-mobile-card__label">Regex</span>
-            <code class="rule-code-block">{{ rule.regex_pattern }}</code>
-          </div>
-
-          <div class="rule-mobile-card__meta">
-            <div class="rule-mobile-card__section">
-              <span class="rule-mobile-card__label">Flags</span>
-              <span class="rule-mobile-card__value">{{ rule.flags || "无 flags" }}</span>
-            </div>
-            <div class="rule-mobile-card__section">
-              <span class="rule-mobile-card__label">说明</span>
-              <p class="rule-mobile-card__description">{{ rule.description || "暂无说明" }}</p>
-            </div>
-          </div>
-
-          <div class="rule-mobile-card__actions">
-            <Button variant="outline" class="w-full" @click="loadRuleIntoTest(rule)">带入测试</Button>
-            <Button variant="ghost" class="w-full" @click="loadRuleIntoApply(rule)">应用到书</Button>
-            <Button
-              class="w-full"
-              :variant="rule.is_default ? 'default' : 'outline'"
-              :disabled="rule.is_default"
-              @click="() => { void handleSetDefault(rule); }"
+        <template v-else>
+          <div class="rule-list">
+            <article
+              v-for="rule in paginatedRules"
+              :key="rule.id"
+              class="rule-item"
             >
-              {{ rule.is_default ? "默认中" : "设为默认" }}
-            </Button>
-            <Button
-              v-if="!rule.is_builtin"
-              variant="ghost"
-              class="w-full"
-              @click="openEditModal(rule)"
-            >
-              编辑
-            </Button>
-            <Button
-              v-if="!rule.is_builtin"
-              class="w-full text-red-600 hover:text-red-700"
-              variant="ghost"
-              @click="confirmDelete(rule)"
-            >
-              删除
-            </Button>
-          </div>
-        </article>
-      </div>
-
-      <div v-else class="rule-page__table-wrap">
-        <table class="rule-table">
-          <thead>
-            <tr>
-              <th>规则信息</th>
-              <th>正则表达式</th>
-              <th>Flags / 说明</th>
-              <th>更新时间</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="rule in paginatedRules" :key="rule.id">
-              <td>
-                <div class="rule-table__primary">
-                  <strong class="rule-table__title">{{ rule.rule_name }}</strong>
-                  <div class="rule-table__badges">
+              <div class="rule-item__head">
+                <div class="rule-item__title-block">
+                  <strong class="rule-item__title">{{ rule.rule_name }}</strong>
+                  <div class="rule-item__badges">
                     <Badge variant="secondary">{{ rule.is_builtin ? "内置" : "自定义" }}</Badge>
                     <Badge v-if="rule.is_default" variant="default">当前默认</Badge>
                   </div>
                 </div>
-              </td>
-              <td><code class="rule-table__code">{{ rule.regex_pattern }}</code></td>
-              <td>
-                <div class="rule-table__secondary">
-                  <div class="rule-table__flags">{{ rule.flags || "无 flags" }}</div>
-                  <p class="rule-table__description">{{ rule.description || "暂无说明" }}</p>
-                </div>
-              </td>
-              <td><span class="rule-table__time">{{ formatDate(rule.updated_at) }}</span></td>
-              <td>
-                <div class="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" @click="loadRuleIntoTest(rule)">带入测试</Button>
-                  <Button size="sm" variant="ghost" @click="loadRuleIntoApply(rule)">应用到书</Button>
-                  <Button
-                    size="sm"
-                    :variant="rule.is_default ? 'default' : 'outline'"
-                    :disabled="rule.is_default"
-                    @click="void handleSetDefault(rule)"
-                  >
-                    {{ rule.is_default ? "默认中" : "设为默认" }}
-                  </Button>
-                  <Button v-if="!rule.is_builtin" size="sm" variant="ghost" @click="openEditModal(rule)">编辑</Button>
-                  <Button
-                    v-if="!rule.is_builtin"
-                    size="sm"
-                    variant="ghost"
-                    class="text-red-600 hover:text-red-700"
-                    @click="confirmDeleteTable(rule)"
-                  >
-                    删除
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                <span class="rule-item__time">{{ formatDateTime(rule.updated_at) }}</span>
+              </div>
 
-        <div v-if="totalPages > 1" class="rule-table__pagination">
-          <Button
-            variant="ghost"
-            size="sm"
-            :disabled="currentPage <= 1"
-            @click="goToPage(currentPage - 1)"
-          >
-            上一页
-          </Button>
-          <span class="rule-table__page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            :disabled="currentPage >= totalPages"
-            @click="goToPage(currentPage + 1)"
-          >
-            下一页
-          </Button>
-        </div>
-      </div>
-    </div>
+              <code class="rule-code-block">{{ rule.regex_pattern }}</code>
 
-    <div class="rule-page__apply-card">
-      <div class="rule-page__card-header">
-        <span class="rule-page__card-title">将规则应用到书籍</span>
-        <span class="rule-page__card-subtitle">快速重解析目录</span>
-      </div>
+              <div class="rule-item__meta">
+                <span class="rule-item__flags">Flags：{{ rule.flags || "无 flags" }}</span>
+                <p class="rule-item__description">{{ rule.description || "暂无说明" }}</p>
+              </div>
 
-      <div class="rule-apply">
-        <section class="rule-apply__form">
-          <div class="rule-apply__lead">
-            <strong>把一条规则直接应用到某本书</strong>
-            <p>你可以从上方规则表点击“应用到书”，也可以在这里手动选择规则和目标书籍，然后立即触发重新解析。</p>
+              <div
+                class="rule-item__actions"
+                :class="{ 'rule-item__actions--stack': isMobileViewport }"
+              >
+                <Button size="sm" variant="outline" @click="loadRuleIntoTest(rule)">带入测试</Button>
+                <Button size="sm" variant="ghost" @click="loadRuleIntoApply(rule)">应用到书</Button>
+                <Button
+                  size="sm"
+                  :variant="rule.is_default ? 'default' : 'outline'"
+                  :disabled="rule.is_default"
+                  @click="void handleSetDefault(rule)"
+                >
+                  {{ rule.is_default ? "默认中" : "设为默认" }}
+                </Button>
+                <Button
+                  v-if="!rule.is_builtin"
+                  size="sm"
+                  variant="ghost"
+                  @click="openEditModal(rule)"
+                >
+                  编辑
+                </Button>
+                <Button
+                  v-if="!rule.is_builtin"
+                  size="sm"
+                  variant="ghost"
+                  class="rule-action--danger"
+                  @click="confirmDelete(rule)"
+                >
+                  删除
+                </Button>
+              </div>
+            </article>
           </div>
 
+          <div v-if="totalPages > 1" class="rule-page__pagination">
+            <Button
+              variant="ghost"
+              size="sm"
+              :disabled="currentPage <= 1"
+              @click="goToPage(currentPage - 1)"
+            >
+              上一页
+            </Button>
+            <span class="rule-page__page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              :disabled="currentPage >= totalPages"
+              @click="goToPage(currentPage + 1)"
+            >
+              下一页
+            </Button>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <!-- 应用到书籍 -->
+    <section class="rule-page__card">
+      <header class="rule-page__card-header">
+        <span class="rule-page__card-title">将规则应用到书籍</span>
+        <span class="rule-page__card-subtitle">选择规则与目标书籍，立即触发重新解析</span>
+      </header>
+
+      <div class="rule-page__card-body rule-apply">
+        <div class="rule-apply__form">
           <div class="rule-form__fields">
-            <div class="rule-form__field"><label>当前应用规则</label>
+            <div class="rule-form__field">
+              <label>当前应用规则</label>
               <Input :model-value="currentApplyRuleName || '未指定，请先选择一条规则'" readonly />
             </div>
 
-            <div class="rule-form__field"><label>目录规则</label>
+            <div class="rule-form__field">
+              <label>目录规则</label>
               <Select v-model="quickApplyState.rule_id" :disabled="loading || ruleOptions.length === 0 || applyPending">
                 <SelectTrigger>
                   <SelectValue placeholder="选择要应用的目录规则" />
@@ -232,7 +166,8 @@
               </div>
             </div>
 
-            <div class="rule-form__field"><label>目标书籍</label>
+            <div class="rule-form__field">
+              <label>目标书籍</label>
               <Select v-model="quickApplyState.book_id" :disabled="booksLoading || bookOptions.length === 0 || applyPending">
                 <SelectTrigger>
                   <SelectValue placeholder="选择要重新解析目录的书" />
@@ -243,7 +178,7 @@
               </Select>
             </div>
 
-            <div class="rule-apply__actions">
+            <div class="rule-pane__actions">
               <Button :disabled="applyPending" @click="runQuickApply">
                 应用规则并重解析
               </Button>
@@ -252,127 +187,97 @@
               </Button>
             </div>
           </div>
-        </section>
+        </div>
 
-        <section class="rule-apply__result">
-          <Alert v-if="booksError" variant="warning" class="rule-test__alert">
+        <div class="rule-apply__result">
+          <Alert v-if="booksError" variant="warning" class="rule-pane__alert">
             {{ booksError }}
           </Alert>
 
-          <Alert v-if="applyErrorMessage" variant="destructive" class="rule-test__alert">
+          <Alert v-if="applyErrorMessage" variant="destructive" class="rule-pane__alert">
             {{ applyErrorMessage }}
           </Alert>
 
           <template v-if="applyResult">
-            <div class="rule-apply__summary">
-              <div class="rule-apply__summary-card">
+            <div class="rule-summary">
+              <div class="rule-summary__item">
                 <span>书籍</span>
                 <strong>{{ applyResultBookTitle }}</strong>
               </div>
-              <div class="rule-apply__summary-card">
+              <div class="rule-summary__item">
                 <span>规则</span>
                 <strong>{{ applyResultRuleName }}</strong>
               </div>
-              <div class="rule-apply__summary-card">
+              <div class="rule-summary__item">
                 <span>总章节</span>
                 <strong>{{ applyResult.total_chapters }}</strong>
               </div>
             </div>
 
-            <div v-if="applyResult.chapters.length === 0" class="rule-test__empty flex flex-col items-center justify-center py-8 text-gray-500">
+            <div v-if="applyResult.chapters.length === 0" class="rule-pane__empty">
               <p>这次重解析没有识别出目录</p>
-              <p class="text-sm">可先回到测试区继续调整规则。</p>
+              <p class="rule-pane__empty-sub">可先回到测试区继续调整规则。</p>
             </div>
 
             <template v-else>
-              <div v-if="isMobileViewport" class="rule-mobile-result-list">
+              <div class="rule-result-list">
                 <article
                   v-for="chapter in applyPreviewChapters"
                   :key="`${chapter.chapter_index}-${chapter.start_offset}`"
-                  class="rule-mobile-result-card"
+                  class="rule-result-item"
                 >
-                  <div class="rule-mobile-result-card__row">
-                    <span>chapter_index</span>
-                    <strong>{{ chapter.chapter_index }}</strong>
+                  <div class="rule-result-item__meta">
+                    <span class="rule-result-item__index"># {{ chapter.chapter_index }}</span>
+                    <span class="rule-result-item__range">{{ chapter.start_offset }} - {{ chapter.end_offset }}</span>
                   </div>
-                  <div class="rule-mobile-result-card__block">
-                    <span>chapter_title</span>
-                    <code class="rule-code-block">{{ chapter.chapter_title }}</code>
-                  </div>
-                  <div class="rule-mobile-result-card__row">
-                    <span>offset</span>
-                    <strong>{{ chapter.start_offset }} - {{ chapter.end_offset }}</strong>
-                  </div>
+                  <code class="rule-code-block">{{ chapter.chapter_title }}</code>
                 </article>
               </div>
-
-              <div v-else class="rule-apply__table-wrap">
-                <table class="rule-result-table">
-                  <thead>
-                    <tr>
-                      <th>chapter_index</th>
-                      <th>chapter_title</th>
-                      <th>offset</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="chapter in applyPreviewChapters"
-                      :key="`${chapter.chapter_index}-${chapter.start_offset}`"
-                    >
-                      <td>{{ chapter.chapter_index }}</td>
-                      <td class="rule-test__match-cell">{{ chapter.chapter_title }}</td>
-                      <td>{{ chapter.start_offset }} - {{ chapter.end_offset }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p class="rule-apply__note">
-                当前展示前 {{ applyPreviewChapters.length }} 条目录预览，完整目录可到书籍详情页继续查看。              </p>
+              <p class="rule-pane__note">
+                当前展示前 {{ applyPreviewChapters.length }} 条目录预览，完整目录可到书籍详情页继续查看。
+              </p>
             </template>
           </template>
 
-          <div v-else class="rule-apply__placeholder">
+          <div v-else class="rule-pane__placeholder">
             <strong>这里会显示应用结果</strong>
             <p>成功后会返回重新解析后的章节数和目录预览，便于你马上判断这条规则是否适合这本书。</p>
           </div>
-        </section>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div class="rule-page__test-card">
-      <div class="rule-page__card-header">
+    <!-- 规则测试 -->
+    <section class="rule-page__card">
+      <header class="rule-page__card-header">
         <span class="rule-page__card-title">规则测试与预览</span>
         <span class="rule-page__card-subtitle">{{ testModeLabel }}</span>
-      </div>
+      </header>
 
-      <div class="rule-test">
-        <section class="rule-test__form">
-          <div class="rule-test__lead">
-            <strong>测试当前规则</strong>
-            <p>先把某条规则带入测试区，再选择“书籍测试”或“原始文本片段测试”。</p>
-          </div>
-
+      <div class="rule-page__card-body rule-test">
+        <div class="rule-test__form">
           <div class="rule-form__fields">
-            <div class="rule-form__field"><label>当前测试规则</label>
+            <div class="rule-form__field">
+              <label>当前测试规则</label>
               <Input :model-value="testState.loadedRuleName || '未指定，支持直接手动输入'" readonly />
             </div>
 
-            <div class="rule-form__field"><label>regex_pattern</label>
+            <div class="rule-form__field">
+              <label>regex_pattern</label>
               <textarea
                 v-model="testState.regex_pattern"
                 rows="4"
                 placeholder="例如：^\s*第\s*\d+\s*[章节回].*$"
-                class="rule-form__textarea"
+                class="rule-form__textarea rule-form__textarea--code"
               ></textarea>
               <div class="rule-field__hint">
                 <span>示例提示：</span>
-                <div class="flex flex-wrap gap-2">
+                <div class="rule-examples">
                   <Button
                     v-for="example in regexExamples"
                     :key="example.label"
                     size="sm"
-                    variant="ghost"
+                    variant="outline"
                     @click="applyExampleToTest(example)"
                   >
                     {{ example.label }}
@@ -389,17 +294,17 @@
                 </Button>
               </div>
               <div class="rule-flags-group">
-                <Button
+                <button
                   v-for="opt in FLAG_OPTIONS"
                   :key="opt.key"
                   type="button"
-                  size="sm"
-                  :variant="isFlagActive(testState.flags, opt.key) ? 'secondary' : 'outline'"
+                  class="rule-flag-chip"
+                  :class="{ 'rule-flag-chip--active': isFlagActive(testState.flags, opt.key) }"
                   @click="toggleFlag(testState, opt.key)"
                 >
-                  <Check v-if="isFlagActive(testState.flags, opt.key)" :size="14" class="mr-1" />
+                  <Check v-if="isFlagActive(testState.flags, opt.key)" :size="13" />
                   {{ opt.label }}
-                </Button>
+                </button>
               </div>
               <div v-show="testFlagsHelpVisible" class="rule-flags-help">
                 <div v-for="opt in FLAG_OPTIONS" :key="opt.key" class="rule-flags-help__item">
@@ -409,20 +314,22 @@
               </div>
             </div>
 
-            <div class="rule-form__field"><label>测试方式</label>
-              <div class="flex flex-wrap gap-2">
-              <label class="rule-form__radio" :class="{ 'rule-form__radio--active': testState.mode === 'book' }">
-                <input v-model="testState.mode" type="radio" value="book" class="sr-only" />
-                <span>选择一本已上传的书</span>
-              </label>
-              <label class="rule-form__radio" :class="{ 'rule-form__radio--active': testState.mode === 'text' }">
-                <input v-model="testState.mode" type="radio" value="text" class="sr-only" />
-                <span>输入原始文本片段</span>
-              </label>
-            </div>
+            <div class="rule-form__field">
+              <label>测试方式</label>
+              <div class="rule-radio-group">
+                <label class="rule-form__radio" :class="{ 'rule-form__radio--active': testState.mode === 'book' }">
+                  <input v-model="testState.mode" type="radio" value="book" class="sr-only" />
+                  <span>选择一本已上传的书</span>
+                </label>
+                <label class="rule-form__radio" :class="{ 'rule-form__radio--active': testState.mode === 'text' }">
+                  <input v-model="testState.mode" type="radio" value="text" class="sr-only" />
+                  <span>输入原始文本片段</span>
+                </label>
+              </div>
             </div>
 
-            <div v-if="testState.mode === 'book'" class="rule-form__field"><label>测试书籍</label>
+            <div v-if="testState.mode === 'book'" class="rule-form__field">
+              <label>测试书籍</label>
               <Select v-model="testState.book_id" :disabled="booksLoading || bookOptions.length === 0">
                 <SelectTrigger>
                   <SelectValue placeholder="选择一本已上传的书" />
@@ -436,7 +343,8 @@
               </div>
             </div>
 
-            <div v-else class="rule-form__field"><label>原始文本片段</label>
+            <div v-else class="rule-form__field">
+              <label>原始文本片段</label>
               <textarea
                 v-model="testState.text"
                 rows="8"
@@ -448,95 +356,71 @@
               </div>
             </div>
 
-            <div class="rule-test__actions">
+            <div class="rule-pane__actions">
               <Button :disabled="testPending" @click="runRuleTest">
-                开始测试              </Button>
+                开始测试
+              </Button>
               <Button variant="outline" :disabled="testPending" @click="clearTestResult">
                 清空结果
               </Button>
             </div>
           </div>
-        </section>
+        </div>
 
-        <section class="rule-test__result">
-          <Alert v-if="booksError" variant="warning" class="rule-test__alert">
+        <div class="rule-test__result">
+          <Alert v-if="booksError" variant="warning" class="rule-pane__alert">
             {{ booksError }}
           </Alert>
 
-          <Alert v-if="testErrorMessage" variant="destructive" class="rule-test__alert">
+          <Alert v-if="testErrorMessage" variant="destructive" class="rule-pane__alert">
             {{ testErrorMessage }}
           </Alert>
 
           <template v-if="testResult">
-            <div class="rule-test__summary">
-              <div class="rule-test__summary-card">
+            <div class="rule-summary">
+              <div class="rule-summary__item">
                 <span>matched</span>
                 <strong>{{ testResult.matched ? "true" : "false" }}</strong>
               </div>
-              <div class="rule-test__summary-card">
+              <div class="rule-summary__item">
                 <span>count</span>
                 <strong>{{ testResult.count }}</strong>
               </div>
-              <div class="rule-test__summary-card">
+              <div class="rule-summary__item">
                 <span>来源</span>
                 <strong>{{ testModeLabel }}</strong>
               </div>
             </div>
 
-            <div v-if="testResult.items.length === 0" class="rule-test__empty flex flex-col items-center justify-center py-8 text-gray-500">
+            <div v-if="testResult.items.length === 0" class="rule-pane__empty">
               <p>这次测试没有找到匹配项</p>
-              <p class="text-sm">可以调整正则或 flags 后再试。</p>
+              <p class="rule-pane__empty-sub">可以调整正则或 flags 后再试。</p>
             </div>
 
-            <div v-else-if="isMobileViewport" class="rule-mobile-result-list">
+            <div v-else class="rule-result-list">
               <article
                 v-for="(item, index) in testResult.items"
                 :key="`${item.start}-${item.end}-${index}`"
-                class="rule-mobile-result-card"
+                class="rule-result-item"
               >
-                <div class="rule-mobile-result-card__block">
-                  <span>匹配文本</span>
-                  <code class="rule-code-block">{{ item.text }}</code>
-                </div>
-                <div class="rule-mobile-result-card__row">
-                  <span>start</span>
-                  <strong>{{ item.start }}</strong>
-                </div>
-                <div class="rule-mobile-result-card__row">
-                  <span>end</span>
-                  <strong>{{ item.end }}</strong>
+                <code class="rule-code-block">{{ item.text }}</code>
+                <div class="rule-result-item__meta">
+                  <span>start <strong>{{ item.start }}</strong></span>
+                  <span>end <strong>{{ item.end }}</strong></span>
                 </div>
               </article>
             </div>
-
-            <div v-else class="rule-test__table-wrap">
-              <table class="rule-result-table">
-                <thead>
-                  <tr>
-                    <th>匹配文本</th>
-                    <th>start</th>
-                    <th>end</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(item, index) in testResult.items" :key="`${item.start}-${item.end}-${index}`">
-                    <td class="rule-test__match-cell">{{ item.text }}</td>
-                    <td>{{ item.start }}</td>
-                    <td>{{ item.end }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
           </template>
 
-          <div v-else class="rule-test__placeholder">
+          <div v-else class="rule-pane__placeholder">
             <strong>这里会显示测试结果</strong>
             <p>你可以先从上面的规则列表里点击“带入测试”，也可以直接手动输入 regex 与 flags。</p>
           </div>
-        </section>
+        </div>
       </div>
-    </div>
+    </section>
 
+    <!-- 新增 / 编辑规则 -->
     <Dialog :open="modalVisible" @update:open="modalVisible = $event">
       <DialogContent class="rule-editor-dialog w-[calc(100%-2rem)] max-w-2xl">
         <DialogHeader>
@@ -549,26 +433,28 @@
           </div>
 
           <div class="rule-form__fields">
-            <div class="rule-form__field"><label>规则名称</label>
+            <div class="rule-form__field">
+              <label>规则名称</label>
               <Input v-model="formModel.rule_name" maxlength="100" placeholder="例如：轻小说章节规则" />
             </div>
 
-            <div class="rule-form__field"><label>正则表达式</label>
+            <div class="rule-form__field">
+              <label>正则表达式</label>
               <textarea
                 v-model="formModel.regex_pattern"
                 rows="4"
                 placeholder="例如：^\s*第\s*\d+\s*[章节回].*$"
-                class="rule-form__textarea"
+                class="rule-form__textarea rule-form__textarea--code"
               ></textarea>
               <div class="rule-field__hint">
                 <span>示例提示：</span>
-                <div class="flex flex-wrap gap-2">
+                <div class="rule-examples">
                   <Button
                     v-for="example in regexExamples"
                     :key="`form-${example.label}`"
                     type="button"
                     size="sm"
-                    variant="ghost"
+                    variant="outline"
                     @click="applyExampleToForm(example)"
                   >
                     {{ example.label }}
@@ -585,17 +471,17 @@
                 </Button>
               </div>
               <div class="rule-flags-group">
-                <Button
+                <button
                   v-for="opt in FLAG_OPTIONS"
                   :key="opt.key"
                   type="button"
-                  size="sm"
-                  :variant="isFlagActive(formModel.flags, opt.key) ? 'secondary' : 'outline'"
+                  class="rule-flag-chip"
+                  :class="{ 'rule-flag-chip--active': isFlagActive(formModel.flags, opt.key) }"
                   @click="toggleFlag(formModel, opt.key)"
                 >
-                  <Check v-if="isFlagActive(formModel.flags, opt.key)" :size="14" class="mr-1" />
+                  <Check v-if="isFlagActive(formModel.flags, opt.key)" :size="13" />
                   {{ opt.label }}
-                </Button>
+                </button>
               </div>
               <div v-show="formFlagsHelpVisible" class="rule-flags-help">
                 <div v-for="opt in FLAG_OPTIONS" :key="opt.key" class="rule-flags-help__item">
@@ -605,7 +491,8 @@
               </div>
             </div>
 
-            <div class="rule-form__field"><label>说明</label>
+            <div class="rule-form__field">
+              <label>说明</label>
               <textarea
                 v-model="formModel.description"
                 rows="3"
@@ -615,7 +502,7 @@
             </div>
 
             <div class="rule-form__field">
-              <label class="flex items-center gap-2 cursor-pointer">
+              <label class="rule-form__checkbox-label">
                 <input v-model="formModel.is_default" type="checkbox" class="rule-form__checkbox" />
                 <span>保存后设为默认规则</span>
               </label>
@@ -633,7 +520,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
+import { useMediaQuery } from "@vueuse/core";
 import {
   Dialog,
   DialogContent,
@@ -644,6 +532,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -657,6 +546,9 @@ import { notify } from "@/utils/notify";
 import { booksApi } from "../api/books";
 import { chapterRulesApi } from "../api/chapter-rules";
 import { getErrorMessage } from "../api/client";
+import PageHeader from "../components/PageHeader.vue";
+import PageStatusPanel from "../components/PageStatusPanel.vue";
+import { formatDateTime } from "../utils/format";
 import type {
   BookReparseResponse,
   BookShelfItem,
@@ -728,7 +620,7 @@ const booksLoading = ref(false);
 const submitting = ref(false);
 const testPending = ref(false);
 const applyPending = ref(false);
-const viewportWidth = ref(typeof window === "undefined" ? MOBILE_BREAKPOINT + 1 : window.innerWidth);
+const isMobileViewport = useMediaQuery(`(max-width: ${MOBILE_BREAKPOINT}px)`);
 const pageError = ref<string | null>(null);
 const booksError = ref<string | null>(null);
 const testErrorMessage = ref<string | null>(null);
@@ -804,7 +696,6 @@ const applyResultRuleName = computed(() => {
 const applyPreviewChapters = computed(() => {
   return (applyResult.value?.chapters || []).slice(0, 6);
 });
-const isMobileViewport = computed(() => viewportWidth.value <= MOBILE_BREAKPOINT);
 
 function createEmptyForm(): RuleFormModel {
   return {
@@ -842,26 +733,6 @@ function resetForm() {
 
 function getFallbackRule() {
   return rules.value.find((rule) => rule.is_default) || rules.value[0] || null;
-}
-
-function formatDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "时间未知";
-  }
-
-  return new Intl.DateTimeFormat("zh-CN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
-function handleWindowResize() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  viewportWidth.value = window.innerWidth;
 }
 
 function applyExampleToForm(example: RegexExample) {
@@ -1058,17 +929,6 @@ async function handleSetDefault(rule: ChapterRule) {
   }
 }
 
-async function confirmDeleteTable(rule: ChapterRule) {
-  const confirmed = await notify.confirm(`删除后无法恢复，确认删除「${rule.rule_name}」吗？`, {
-    title: "删除目录规则",
-    confirmLabel: "确认删除",
-    destructive: true,
-  });
-  if (confirmed) {
-    void handleDelete(rule);
-  }
-}
-
 async function confirmDelete(rule: ChapterRule) {
   const confirmed = await notify.confirm(`删除后无法恢复，确认删除「${rule.rule_name}」吗？`, {
     title: "删除目录规则",
@@ -1210,183 +1070,92 @@ async function runQuickApply() {
 }
 
 onMounted(() => {
-  if (typeof window !== "undefined") {
-    viewportWidth.value = window.innerWidth;
-    window.addEventListener("resize", handleWindowResize, { passive: true });
-  }
-
   void loadInitialData();
-});
-
-onUnmounted(() => {
-  if (typeof window !== "undefined") {
-    window.removeEventListener("resize", handleWindowResize);
-  }
 });
 </script>
 
 <style scoped>
 .rule-page {
-  width: min(100%, 1720px);
+  width: min(100%, 1200px);
   margin: 0 auto;
   display: grid;
   gap: var(--space-5);
 }
 
-.rule-page__intro-stack {
-  display: grid;
-  gap: var(--space-3);
-}
-
 .rule-page,
-.rule-page__intro-stack,
-.rule-page__hero,
-.rule-page__hero-copy,
-.rule-page__hero-aside,
-.rule-page__toolbar,
-.rule-page__table-wrap,
+.rule-list,
+.rule-item,
 .rule-test,
 .rule-apply,
 .rule-test__form,
 .rule-test__result,
 .rule-apply__form,
 .rule-apply__result,
-.rule-mobile-list,
-.rule-mobile-card,
-.rule-mobile-result-list,
-.rule-mobile-result-card {
+.rule-result-list,
+.rule-result-item {
   min-width: 0;
 }
 
-.rule-page__hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.75fr);
-  gap: 24px;
-  align-items: start;
-  padding: clamp(20px, 3vw, 28px);
-  border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-xl);
-  /* 二次元风格 hero 区：淡蓝粉光晕 */
-  background:
-    radial-gradient(circle at top right, rgba(74, 159, 217, 0.14), transparent 28%),
-    radial-gradient(circle at bottom left, rgba(244, 164, 180, 0.12), transparent 30%),
-    var(--surface-raised);
-  box-shadow: var(--shadow-soft);
-}
-
-.rule-page__hero-copy {
-  min-width: 0;
-}
-
-.rule-page__hero-aside {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.rule-page__eyebrow {
-  display: inline-flex;
-  margin-bottom: 12px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(74, 159, 217, 0.16);
-  color: var(--primary-color);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.rule-page__title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: clamp(28px, 3.6vw, 38px);
-  line-height: 1.12;
-  overflow-wrap: anywhere;
-}
-
-.rule-page__description {
-  max-width: 54ch;
-  margin: 12px 0 0;
-  color: var(--text-secondary);
-  line-height: 1.75;
-  overflow-wrap: anywhere;
-}
-
+/* 统计行：轻量 stat 块 */
 .rule-page__stats {
   display: grid;
-  gap: 10px;
-  min-width: 220px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
 }
 
 .rule-page__stat {
   padding: 14px 16px;
   border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.64);
+  border-radius: var(--radius-sm);
+  background: var(--surface-stat-bg);
 }
 
-.rule-page__stat span {
+.rule-page__stat-label {
   display: block;
   color: var(--text-secondary);
   font-size: var(--text-caption);
 }
 
-.rule-page__stat strong {
+.rule-page__stat-value {
   display: block;
-  margin-top: 4px;
+  margin-top: 6px;
+  font-family: var(--font-display);
   font-size: 22px;
-  line-height: 1.1;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
-.rule-page__toolbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  padding: 14px 18px;
-  border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.68);
-  box-shadow: var(--shadow-soft);
-}
-
-.rule-page__toolbar-note {
-  display: grid;
-  gap: 4px;
-}
-
-.rule-page__toolbar-note span {
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-}
-
-.rule-page__toolbar-note strong {
+.rule-page__stat-value--text {
   font-size: 16px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
-.rule-page__toolbar-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+.rule-page__alert {
+  border-radius: var(--radius-md);
 }
 
-.rule-page__alert,
-.rule-test__alert {
-  border-radius: 18px;
-}
-
-.rule-page__table-card,
-.rule-page__apply-card,
-.rule-page__test-card {
+/* 分区卡片：1px 细边框 + 柔和圆角 + 卡片底色 */
+.rule-page__card {
   border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-xl);
-  background: var(--surface-raised);
-  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-card-bg);
+  overflow: hidden;
+}
+
+.rule-page__card-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-color-soft);
 }
 
 .rule-page__card-title {
+  font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .rule-page__card-subtitle {
@@ -1394,85 +1163,116 @@ onUnmounted(() => {
   font-size: 13px;
 }
 
-.rule-page__table-wrap,
-.rule-test__table-wrap,
-.rule-apply__table-wrap {
-  overflow-x: auto;
+.rule-page__card-body {
+  padding: 18px 20px;
 }
 
-.rule-mobile-list,
-.rule-mobile-result-list {
+/* 规则列表：统一卡片式列表，桌面移动共用一份模板 */
+.rule-list {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-.rule-mobile-card,
-.rule-mobile-result-card {
+.rule-item {
   display: grid;
   gap: 12px;
-  padding: 16px;
+  padding: 16px 18px;
   border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.56);
+  border-radius: var(--radius-md);
 }
 
-.rule-mobile-card__header,
-.rule-mobile-card__meta,
-.rule-mobile-card__title-block,
-.rule-mobile-card__section {
-  display: grid;
-  gap: 8px;
+.rule-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px 16px;
 }
 
-.rule-mobile-card__badges,
-.rule-mobile-card__actions {
-  display: grid;
-  gap: 8px;
+.rule-item__title-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
-.rule-mobile-card__title {
-  font-size: 16px;
+.rule-item__title {
+  font-size: 15px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
-.rule-mobile-card__time,
-.rule-mobile-card__label,
-.rule-mobile-card__value,
-.rule-mobile-result-card__row span,
-.rule-mobile-result-card__block span {
+.rule-item__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rule-item__time {
   color: var(--text-secondary);
   font-size: 12px;
+  white-space: nowrap;
 }
 
-.rule-mobile-card__description {
-  margin: 0;
-  color: var(--text-primary);
-  line-height: 1.75;
-}
-
-.rule-mobile-result-card__row,
-.rule-mobile-result-card__block {
+.rule-item__meta {
   display: grid;
   gap: 6px;
 }
 
-.rule-mobile-result-card__row strong {
-  color: var(--text-primary);
-  font-size: 14px;
+.rule-item__flags {
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
+.rule-item__description {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.rule-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rule-item__actions--stack {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.rule-action--danger {
+  color: var(--alert-destructive-text);
+}
+
+.rule-page__pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding-top: var(--space-4);
+}
+
+.rule-page__page-info {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* 等宽代码块：正则 / 匹配文本 */
 .rule-code-block {
   display: block;
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  margin: 0;
   padding: 12px 14px;
   border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-md);
-  /* 二次元风格代码块：极淡蓝色背景 */
-  background: rgba(74, 159, 217, 0.08);
+  border-radius: var(--radius-sm);
+  background: var(--surface-code-bg);
   color: var(--text-primary);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   line-height: 1.7;
   white-space: pre;
@@ -1481,292 +1281,140 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-.rule-form__intro {
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.58);
-}
-
-.rule-form__intro p {
-  margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.7;
-}
-
-.rule-editor-dialog {
-  max-height: calc(100dvh - 32px);
-  grid-template-rows: auto minmax(0, 1fr) auto;
-}
-
-.rule-form__body {
-  min-height: 0;
-  margin: 0 -8px;
-  padding: 0 8px;
-  overflow-y: auto;
-}
-
-.rule-form__footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-color-soft);
-  background: var(--dialog-bg);
-}
-
-.rule-field__hint {
-  display: grid;
-  gap: 10px;
-  width: 100%;
-  margin-top: 12px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.rule-table__primary,
-.rule-table__secondary {
-  display: grid;
-  gap: 8px;
-}
-
-.rule-table__title {
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-.rule-table__badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.rule-table__code,
-.rule-test__match-cell {
-  display: block;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: var(--text-primary);
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.rule-table__flags,
-.rule-table__time {
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.rule-table__description {
-  margin: 0;
-  color: var(--text-primary);
-  line-height: 1.7;
-}
-
+/* 测试 / 应用双栏布局 */
 .rule-test,
 .rule-apply {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  gap: 20px;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: var(--space-5);
+  align-items: start;
 }
 
-.rule-test__form,
-.rule-test__result,
-.rule-apply__form,
-.rule-apply__result {
-  padding: 18px;
+.rule-apply__result,
+.rule-test__result {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  padding: 16px;
   border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel-soft-bg);
 }
 
-.rule-test__lead,
-.rule-apply__lead {
-  margin-bottom: 18px;
+.rule-pane__alert {
+  border-radius: var(--radius-sm);
 }
 
-.rule-test__lead strong,
-.rule-apply__lead strong {
-  display: block;
-  font-size: 18px;
-}
-
-.rule-test__lead p,
-.rule-apply__lead p {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-  line-height: 1.8;
-}
-
-.rule-test__actions,
-.rule-apply__actions {
+.rule-pane__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
 }
 
-.rule-test__summary,
-.rule-apply__summary {
+.rule-pane__placeholder {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+  min-height: 180px;
+  text-align: center;
+  justify-items: center;
+  padding: 12px;
+}
+
+.rule-pane__placeholder strong {
+  font-family: var(--font-display);
+  font-size: 17px;
+}
+
+.rule-pane__placeholder p,
+.rule-pane__note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.rule-pane__empty {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 24px 0 8px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.rule-pane__empty p {
+  margin: 0;
+}
+
+.rule-pane__empty-sub {
+  font-size: 13px;
+}
+
+/* 结果摘要 */
+.rule-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
 }
 
-.rule-test__summary-card,
-.rule-apply__summary-card {
-  padding: 14px 16px;
+.rule-summary__item {
+  padding: 12px 14px;
   border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.78);
+  border-radius: var(--radius-sm);
+  background: var(--surface-stat-bg);
 }
 
-.rule-test__summary-card span,
-.rule-apply__summary-card span {
+.rule-summary__item span {
   display: block;
   color: var(--text-secondary);
   font-size: 12px;
 }
 
-.rule-test__summary-card strong,
-.rule-apply__summary-card strong {
+.rule-summary__item strong {
   display: block;
   margin-top: 6px;
-  font-size: 22px;
+  font-size: 16px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
-.rule-test__placeholder,
-.rule-apply__placeholder {
+/* 结果列表：数据驱动的自适应网格，桌面多列、移动单列 */
+.rule-result-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+.rule-result-item {
   display: grid;
   gap: 10px;
   align-content: start;
-  min-height: 100%;
-  padding: 12px 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card-bg);
 }
 
-.rule-test__placeholder strong,
-.rule-apply__placeholder strong {
-  font-size: 18px;
-}
-
-.rule-test__placeholder p,
-.rule-apply__placeholder p,
-.rule-apply__note {
-  margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.8;
-}
-
-.rule-test__empty {
-  padding: 18px 0 4px;
-}
-
-@media (max-width: 960px) {
-  .rule-page__hero,
-  .rule-test,
-  .rule-apply {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  .rule-page__stats {
-    min-width: 0;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .rule-page__hero-aside {
-    justify-content: stretch;
-  }
-
-  .rule-page__toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-
-@media (max-width: 720px) {
-  .rule-page__hero,
-  .rule-page__toolbar {
-    padding: 14px;
-  }
-
-  .rule-page {
-    gap: 16px;
-  }
-
-  .rule-page__title {
-    font-size: clamp(24px, 7vw, 30px);
-    line-height: 1.2;
-  }
-
-  .rule-page__description {
-    max-width: none;
-  }
-
-  .rule-page__stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .rule-test__summary,
-  .rule-apply__summary {
-    grid-template-columns: 1fr;
-  }
-
-  .rule-page__hero-aside {
-    justify-content: stretch;
-  }
-
-  .rule-page__stat,
-  .rule-test__form,
-  .rule-test__result,
-  .rule-apply__form,
-  .rule-apply__result,
-  .rule-mobile-card,
-  .rule-mobile-result-card {
-    padding: 14px;
-  }
-
-  .rule-page__stat {
-    padding: 12px 10px;
-  }
-
-  .rule-page__stat span {
-    font-size: 11px;
-    line-height: 1.4;
-  }
-
-  .rule-page__stat strong {
-    font-size: 18px;
-  }
-
-  .rule-mobile-card__actions {
-    grid-template-columns: 1fr;
-  }
-
-  .rule-page__toolbar-actions,
-  .rule-form__footer,
-  .rule-test__actions,
-  .rule-apply__actions {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  .rule-page__card-subtitle {
-    display: none;
-  }
-}
-
-.rule-page__card-header {
+.rule-result-item__meta {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color-soft);
+  gap: 4px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
+.rule-result-item__meta strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.rule-result-item__index {
+  font-weight: 600;
+}
+
+/* 表单 */
 .rule-form__fields {
   display: grid;
   gap: 16px;
@@ -1783,138 +1431,10 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.rule-form__textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.7;
-  resize: vertical;
-  outline: none;
-  transition: border-color 160ms ease;
-}
-
-.rule-form__textarea:focus {
-  border-color: var(--accent-color);
-}
-
-.rule-form__checkbox {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--primary-color);
-  cursor: pointer;
-}
-
-.rule-form__radio {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 14px;
-  border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.6);
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 160ms ease;
-}
-
-.rule-form__radio:hover {
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.rule-form__radio--active {
-  border-color: var(--primary-color);
-  background: rgba(74, 159, 217, 0.12);
-  color: var(--primary-color);
-  font-weight: 600;
-}
-
-.rule-form__radio input {
-  position: absolute;
-  opacity: 0;
-}
-
-.rule-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid var(--border-color-soft);
-  border-radius: 8px;
-  overflow: hidden;
-  font-size: 14px;
-}
-
-.rule-table th,
-.rule-table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid var(--border-color-soft);
-  vertical-align: top;
-}
-
-.rule-table th {
-  background: var(--surface-soft, rgba(255, 245, 247, 0.56));
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.rule-table tbody tr:hover {
-  background: rgba(74, 159, 217, 0.14);
-}
-
-.rule-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.rule-table__pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  margin-top: 16px;
-  padding: 12px;
-}
-
-.rule-table__page-info {
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.rule-result-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid var(--border-color-soft);
-  border-radius: 8px;
-  overflow: hidden;
-  font-size: 14px;
-}
-
-.rule-result-table th,
-.rule-result-table td {
-  padding: 10px 14px;
-  text-align: left;
-  border-bottom: 1px solid var(--border-color-soft);
-}
-
-.rule-result-table th {
-  background: var(--surface-soft, rgba(255, 245, 247, 0.56));
-  font-weight: 600;
-  font-size: 13px;
-}
-
-.rule-result-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
 .rule-form__label-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
 }
 
 .rule-form__help-btn {
@@ -1928,18 +1448,86 @@ onUnmounted(() => {
   color: var(--text-secondary);
 }
 
+.rule-form__textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface-input-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+  resize: vertical;
+  outline: none;
+  transition: border-color 160ms ease;
+  box-sizing: border-box;
+}
+
+.rule-form__textarea:focus {
+  border-color: var(--primary-color);
+}
+
+.rule-form__textarea--code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+}
+
+.rule-field__hint {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.rule-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* flags 选择 chip */
 .rule-flags-group {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.rule-flags-help {
-  margin-top: 10px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  background: var(--surface-soft, rgba(255, 245, 247, 0.56));
+.rule-flag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
   border: 1px solid var(--border-color-soft);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.rule-flag-chip:hover {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.rule-flag-chip--active {
+  border-color: var(--primary-color);
+  background: var(--primary-soft);
+  color: var(--primary-color);
+}
+
+.rule-flags-help {
+  margin-top: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel-soft-bg);
   display: grid;
   gap: 8px;
 }
@@ -1954,7 +1542,7 @@ onUnmounted(() => {
 .rule-flags-help__item code {
   padding: 2px 8px;
   border-radius: 6px;
-  background: rgba(74, 159, 217, 0.12);
+  background: var(--surface-code-bg);
   color: var(--primary-color);
   font-size: 12px;
   font-weight: 600;
@@ -1966,4 +1554,154 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
+/* 单选（测试方式） */
+.rule-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rule-form__radio {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.rule-form__radio:hover {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.rule-form__radio--active {
+  border-color: var(--primary-color);
+  background: var(--primary-soft);
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.rule-form__radio input {
+  position: absolute;
+  opacity: 0;
+}
+
+/* 编辑 Dialog */
+.rule-editor-dialog {
+  max-height: calc(100dvh - 32px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.rule-form__body {
+  min-height: 0;
+  margin: 0 -8px;
+  padding: 0 8px;
+  overflow-y: auto;
+}
+
+.rule-form__intro {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel-soft-bg);
+}
+
+.rule-form__intro p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.rule-form__intro code {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface-code-bg);
+  color: var(--primary-color);
+  font-size: 12px;
+}
+
+.rule-form__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.rule-form__checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+}
+
+.rule-form__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color-soft);
+  background: var(--dialog-bg);
+}
+
+@media (max-width: 960px) {
+  .rule-test,
+  .rule-apply {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .rule-page {
+    gap: var(--space-4);
+  }
+
+  .rule-page__card-header,
+  .rule-page__card-body {
+    padding: 14px 16px;
+  }
+
+  .rule-page__card-subtitle {
+    display: none;
+  }
+
+  .rule-page__stat {
+    padding: 12px 12px;
+  }
+
+  .rule-page__stat-value {
+    font-size: 18px;
+  }
+
+  .rule-page__stat-value--text {
+    font-size: 14px;
+  }
+
+  .rule-item {
+    padding: 14px;
+  }
+
+  .rule-item__time {
+    white-space: normal;
+  }
+
+  .rule-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .rule-result-list {
+    grid-template-columns: 1fr;
+  }
+
+  .rule-pane__actions,
+  .rule-form__footer {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
 </style>

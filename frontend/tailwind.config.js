@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'class',
+  // 暗色策略：跟随 body 上的 app-theme--dark class（由 stores/app-theme.ts 维护）
+  darkMode: ['class', 'body.app-theme--dark'],
   content: [
     './index.html',
     './src/**/*.{vue,ts,tsx,js,jsx}',
@@ -23,21 +24,23 @@ export default {
           'serif',
         ],
       },
+      // 与 styles/index.css 的 --radius-* 保持一致
       borderRadius: {
-        'md': '6px',
-        'lg': '8px',
-        'xl': '12px',
+        'sm': '10px',
+        'md': '16px',
+        'lg': '22px',
+        'xl': '28px',
       },
       colors: {
         primary: {
-          DEFAULT: 'var(--primary-color, #F4A4B4)',
-          soft: 'var(--primary-soft, rgba(244, 164, 180, 0.18))',
+          DEFAULT: 'var(--primary-color, #9A6238)',
+          soft: 'var(--primary-soft, rgba(154, 98, 56, 0.14))',
         },
         accent: {
-          DEFAULT: 'var(--accent-color, #C9B1FF)',
+          DEFAULT: 'var(--accent-color, #6E8577)',
         },
         surface: {
-          DEFAULT: 'var(--surface-color, #FFFFFF)',
+          DEFAULT: 'var(--surface-color, #FDFBF6)',
           raised: 'var(--surface-raised)',
           soft: 'var(--surface-soft)',
           panel: 'var(--surface-panel-bg)',
@@ -45,7 +48,7 @@ export default {
           input: 'var(--surface-input-bg)',
         },
         muted: {
-          DEFAULT: 'var(--text-secondary, #7A7A7A)',
+          DEFAULT: 'var(--text-secondary, #6F675B)',
         },
       },
     },

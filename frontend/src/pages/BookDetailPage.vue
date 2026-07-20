@@ -9,42 +9,26 @@
 
       <!-- Loading -->
       <template v-if="loading">
-        <div class="detail-hero skeleton">
-          <Skeleton class="h-[280px] w-full rounded-3xl" />
-          <div class="space-y-3">
-            <Skeleton class="h-4 w-24" />
+        <div class="detail-hero">
+          <Skeleton class="detail-hero__cover" />
+          <div class="detail-hero__body">
+            <Skeleton class="h-6 w-24 rounded-full" />
             <Skeleton class="h-10 w-3/4" />
-            <Skeleton class="h-5 w-1/2" />
-            <Skeleton class="h-20 w-full" />
-            <div class="flex gap-2">
-              <Skeleton v-for="i in 4" :key="i" class="h-8 w-20" />
+            <Skeleton class="h-5 w-1/3" />
+            <Skeleton class="h-16 w-full" />
+            <div class="flex flex-wrap gap-2">
+              <Skeleton v-for="i in 4" :key="i" class="h-7 w-24 rounded-full" />
             </div>
-            <div class="flex gap-3 pt-2">
-              <Skeleton class="h-12 w-32" />
-              <Skeleton class="h-12 w-24" />
-              <Skeleton class="h-12 w-24" />
+            <div class="flex flex-wrap gap-3 pt-2">
+              <Skeleton class="h-11 w-32" />
+              <Skeleton class="h-11 w-28" />
+              <Skeleton class="h-11 w-28" />
             </div>
           </div>
         </div>
         <div class="detail-grid">
-          <div class="detail-card">
-            <Skeleton class="h-14 w-full" />
-            <div class="p-5 space-y-3">
-              <div class="grid grid-cols-2 gap-3">
-                <Skeleton v-for="i in 4" :key="i" class="h-20 w-full rounded-2xl" />
-              </div>
-              <Skeleton class="h-20 w-full rounded-2xl" />
-            </div>
-          </div>
-          <div class="detail-card">
-            <Skeleton class="h-14 w-full" />
-            <div class="p-5 space-y-3">
-              <div class="grid grid-cols-2 gap-3">
-                <Skeleton v-for="i in 4" :key="i" class="h-20 w-full rounded-2xl" />
-              </div>
-              <Skeleton class="h-20 w-full rounded-2xl" />
-            </div>
-          </div>
+          <Skeleton v-for="i in 2" :key="i" class="h-64 w-full" />
+          <Skeleton class="detail-card--full h-72 w-full" />
         </div>
       </template>
 
@@ -64,18 +48,11 @@
       <template v-else-if="book">
         <!-- Hero -->
         <div class="detail-hero">
-          <div class="detail-hero__cover" :class="{ 'detail-hero__cover--filled': !!book.cover_url }">
-            <img
-              v-if="resolvedCoverUrl"
-              class="detail-hero__cover-image"
-              :src="resolvedCoverUrl"
-              :alt="`${book.title} 封面`"
-            />
-            <template v-else>
-              <div class="detail-hero__cover-badge">TXT</div>
-              <div class="detail-hero__cover-letter">{{ getCoverLetter(book.title) }}</div>
-            </template>
-          </div>
+          <BookCover
+            class="detail-hero__cover"
+            :title="book.title"
+            :cover-url="book.cover_url"
+          />
 
           <div class="detail-hero__body">
             <div class="detail-hero__eyebrow">Book Detail</div>
@@ -91,6 +68,14 @@
               <Badge variant="secondary">当前规则 {{ currentRuleName }}</Badge>
               <Badge variant="secondary">{{ progressTagLabel }}</Badge>
               <Badge variant="secondary">{{ progressPercentLabel }}</Badge>
+            </div>
+
+            <div class="detail-hero__progress">
+              <ProgressBar :percent="progressPercentValue" />
+              <div class="detail-hero__progress-text">
+                <span>{{ progressTagLabel }}</span>
+                <span>{{ progressPercentLabel }}</span>
+              </div>
             </div>
 
             <div class="detail-hero__actions">
@@ -230,7 +215,7 @@
                   </p>
 
                   <div v-if="rulePreviewPending" class="detail-rule-preview__loading">
-                    <Skeleton v-for="index in 4" :key="index" class="h-10 w-full rounded-xl" />
+                    <Skeleton v-for="index in 4" :key="index" class="h-8 w-full" />
                   </div>
 
                   <Alert v-else-if="rulePreviewError" variant="destructive" class="detail-rule-card__alert">
@@ -273,23 +258,13 @@
         <DialogContent class="metadata-modal max-w-3xl">
           <div class="metadata-modal__layout">
             <div class="metadata-modal__cover-panel">
-              <div
+              <BookCover
                 class="metadata-modal__cover"
-                :class="{ 'metadata-modal__cover--filled': !!book?.cover_url }"
+                :title="book?.title ?? ''"
+                :cover-url="book?.cover_url"
+                fallback-text="点击上传封面"
                 @click="coverInputRef?.click()"
-              >
-                <img
-                  v-if="resolvedCoverUrl"
-                  class="metadata-modal__cover-image"
-                  :src="resolvedCoverUrl"
-                  :alt="`${book?.title} 封面`"
-                />
-                <template v-else>
-                  <div class="metadata-modal__cover-type">封面</div>
-                  <div class="metadata-modal__cover-letter">{{ book ? getCoverLetter(book.title) : '?' }}</div>
-                  <div class="metadata-modal__cover-text">点击上传封面</div>
-                </template>
-              </div>
+              />
               <div class="metadata-modal__cover-actions">
                 <Button variant="outline" size="sm" :disabled="coverUploading" @click="coverInputRef?.click()">
                   {{ coverUploading ? "上传中..." : "上传封面" }}
@@ -367,8 +342,10 @@ import {
 import { notify } from "@/utils/notify";
 
 import { booksApi } from "../api/books";
-import { resolveApiAssetUrl, ApiError, getErrorMessage } from "../api/client";
+import { ApiError, getErrorMessage } from "../api/client";
 import { chapterRulesApi } from "../api/chapter-rules";
+import BookCover from "../components/BookCover.vue";
+import ProgressBar from "../components/ProgressBar.vue";
 import ChapterCatalogModalDrawer from "../components/ChapterCatalogModalDrawer.vue";
 import PageStatusPanel from "../components/PageStatusPanel.vue";
 import type { BookChapter, BookDetail, ChapterRule, ReadingProgress } from "../types/api";
@@ -451,11 +428,13 @@ const progressTagLabel = computed(() => {
   return `上次读到第 ${formatNumber(progress.value.chapter_index + 1)} 章`;
 });
 
-const progressPercentLabel = computed(() => {
-  return `进度 ${formatPercent(book.value?.progress_percent ?? progress.value?.percent ?? 0)}`;
+const progressPercentValue = computed(() => {
+  return book.value?.progress_percent ?? progress.value?.percent ?? 0;
 });
 
-const resolvedCoverUrl = computed(() => resolveApiAssetUrl(book.value?.cover_url));
+const progressPercentLabel = computed(() => {
+  return `进度 ${formatPercent(progressPercentValue.value)}`;
+});
 
 function formatDate(value: string) {
   return formatDateTime(value, "时间未知");
@@ -463,11 +442,6 @@ function formatDate(value: string) {
 
 function formatOptionalDate(value: string | null | undefined) {
   return formatDateTime(value, "未开始");
-}
-
-function getCoverLetter(title: string) {
-  const normalized = title.trim();
-  return normalized ? normalized.slice(0, 1).toUpperCase() : "T";
 }
 
 function syncEditorFields(bookDetail: BookDetail) {
@@ -648,6 +622,7 @@ async function handleReparse() {
   reparsePending.value = true;
   try {
     const result = await booksApi.reparse(props.bookId, Number(selectedRuleId.value));
+    booksCacheStore.invalidate(props.bookId);
     await loadBookAndChapters();
     notify.success(
       `已应用“${selectedRule.value?.rule_name || "所选规则"}”，共解析出 ${formatNumber(result.total_chapters)} 个章节。`,
@@ -745,10 +720,10 @@ watch(
 
 /* Content container: centered with max-width */
 .book-detail-page__container {
-  max-width: 1400px;
+  max-width: 1080px;
   margin: 0 auto;
   display: grid;
-  gap: 24px;
+  gap: 32px;
 }
 
 /* Topbar */
@@ -761,117 +736,93 @@ watch(
 
 .book-detail-page__crumb {
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
 }
 
-/* Hero section */
+/* Hero: 纯排版，无卡片边框，左封面右信息 */
 .detail-hero {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 24px;
-  padding: clamp(24px, 4vw, 32px);
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at top right, rgba(74, 159, 217, 0.18), transparent 26%),
-    radial-gradient(circle at bottom left, rgba(244, 164, 180, 0.16), transparent 32%),
-    color-mix(in srgb, var(--surface-color) 94%, white 6%);
-  box-shadow: var(--surface-shadow);
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: clamp(24px, 4vw, 40px);
+  align-items: start;
 }
 
 .detail-hero__cover {
-  position: relative;
-  display: grid;
-  place-items: center;
-  min-height: 280px;
-  border-radius: 24px;
-  background:
-    linear-gradient(155deg, rgba(74, 159, 217, 0.92), rgba(244, 164, 180, 0.92)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent);
-  color: white;
-  overflow: hidden;
-}
-
-.detail-hero__cover--filled {
-  background: rgba(255, 255, 255, 0.7);
-}
-
-.detail-hero__cover-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.detail-hero__cover-badge {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 1;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.detail-hero__cover-letter {
-  position: relative;
-  z-index: 1;
-  font-family: var(--font-display);
-  font-size: 72px;
-  font-weight: 700;
+  width: 140px;
+  height: 190px;
+  border-radius: var(--radius-sm);
 }
 
 .detail-hero__body {
   display: grid;
-  gap: 18px;
-  align-content: center;
+  gap: 16px;
+  align-content: start;
 }
 
 .detail-hero__eyebrow {
   display: inline-flex;
   width: fit-content;
-  padding: 6px 12px;
+  padding: 5px 12px;
+  border: 1px solid var(--border-color-soft);
   border-radius: 999px;
-  background: rgba(74, 159, 217, 0.16);
   color: var(--primary-color);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .detail-hero__title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(30px, 4vw, 46px);
-  line-height: 1.08;
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-wrap: balance;
 }
 
 .detail-hero__author {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .detail-hero__description {
   margin: 0;
+  max-width: 64ch;
   color: var(--text-secondary);
-  line-height: 1.8;
+  font-size: 14px;
+  line-height: 1.9;
   white-space: pre-wrap;
 }
 
 .detail-hero__tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+}
+
+.detail-hero__progress {
+  display: grid;
+  gap: 8px;
+  max-width: 420px;
+}
+
+.detail-hero__progress-text {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .detail-hero__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  padding-top: 4px;
 }
 
 /* Cards grid */
@@ -881,12 +832,11 @@ watch(
   gap: 20px;
 }
 
-/* Card base */
+/* Card base: 1px 细边框 + 柔和圆角 + 卡片底色 */
 .detail-card {
   border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-xl);
-  background: var(--surface-raised);
-  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-card-bg);
   overflow: hidden;
 }
 
@@ -896,31 +846,32 @@ watch(
 
 /* Card header: block-level container with full-width border */
 .detail-card__header {
-  padding: 20px 24px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--border-color-soft);
 }
 
 .detail-card__heading {
+  font-size: 13px;
   font-weight: 700;
-  font-size: 16px;
+  letter-spacing: 0.08em;
 }
 
 /* Card body */
 .detail-card__body {
-  padding: 20px 24px;
+  padding: 18px 20px;
 }
 
 /* Info grid inside cards */
 .detail-info-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
 }
 
 .detail-info-item {
-  padding: 16px 20px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.55);
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel-soft-bg);
 }
 
 .detail-info-item--wide {
@@ -931,12 +882,14 @@ watch(
   display: block;
   color: var(--text-secondary);
   font-size: 12px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .detail-info-item__value {
   display: block;
-  line-height: 1.6;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.7;
   word-break: break-word;
 }
 
@@ -946,15 +899,15 @@ watch(
 
 /* Group list */
 .detail-group-list {
-  margin-top: 16px;
-  padding: 16px 20px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.55);
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel-soft-bg);
 }
 
 .detail-group-list__label {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   color: var(--text-secondary);
   font-size: 12px;
 }
@@ -967,24 +920,28 @@ watch(
 
 /* File path */
 .detail-file-path {
-  margin-top: 16px;
-  padding: 16px 20px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.55);
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel-soft-bg);
 }
 
 .detail-file-path__label {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   color: var(--text-secondary);
   font-size: 12px;
 }
 
 .detail-file-path code {
+  display: block;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-code-bg);
   white-space: pre-wrap;
   word-break: break-all;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 /* Rule card */
@@ -997,25 +954,28 @@ watch(
   display: block;
   color: var(--text-secondary);
   font-size: 12px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .detail-rule-card__current strong {
   display: block;
-  font-size: 18px;
-  margin-bottom: 10px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 8px;
 }
 
 .detail-rule-card__current p {
   margin: 0;
   color: var(--text-secondary);
+  font-size: 14px;
   line-height: 1.8;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .detail-rule-card__alert {
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
 }
 
 .detail-rule-card__actions {
@@ -1026,10 +986,10 @@ watch(
 
 .detail-rule-preview {
   display: grid;
-  gap: 14px;
-  padding: 18px;
+  gap: 12px;
+  padding: 16px;
   border: 1px solid var(--border-color-soft);
-  border-radius: 20px;
+  border-radius: var(--radius-md);
   background: var(--surface-soft);
 }
 
@@ -1075,9 +1035,10 @@ watch(
   gap: 8px;
 }
 
+/* 规则预览列表：等宽字体显示匹配标题 */
 .detail-rule-preview__list {
   display: grid;
-  gap: 8px;
+  gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1085,107 +1046,73 @@ watch(
 
 .detail-rule-preview__list li {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: baseline;
   gap: 10px;
-  min-height: 42px;
-  padding: 8px 12px;
-  border-radius: 14px;
-  background: var(--surface-panel-bg);
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.detail-rule-preview__list li:nth-child(odd) {
+  background: var(--surface-panel-soft-bg);
 }
 
 .detail-rule-preview__list li > span {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: var(--primary-soft);
-  color: var(--primary-color);
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
-  font-weight: 700;
 }
 
 .detail-rule-preview__list li > strong {
   min-width: 0;
   overflow: hidden;
   color: var(--text-primary);
-  font-size: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.8;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 /* Metadata modal */
 .metadata-modal {
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
 }
 
 .metadata-modal__layout {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 200px minmax(0, 1fr);
   gap: 20px;
 }
 
 .metadata-modal__cover-panel {
   display: grid;
-  gap: 14px;
+  gap: 12px;
+  align-content: start;
 }
 
 .metadata-modal__cover {
-  display: grid;
-  place-items: center;
-  min-height: 280px;
-  border-radius: 22px;
-  border: 1px solid rgba(74, 159, 217, 0.22);
-  background: linear-gradient(180deg, #F0F8FF 0%, #E0E8F0 100%);
-  overflow: hidden;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.metadata-modal__cover--filled {
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.metadata-modal__cover-image {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.metadata-modal__cover-type {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--primary-color);
-}
-
-.metadata-modal__cover-letter {
-  font-family: var(--font-display);
-  font-size: 68px;
-  line-height: 1;
-}
-
-.metadata-modal__cover-text {
-  font-size: 12px;
-  color: var(--text-secondary);
+  aspect-ratio: 3 / 4;
+  cursor: pointer;
 }
 
 .metadata-modal__cover-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .metadata-modal__form {
   display: grid;
-  gap: 16px;
+  gap: 14px;
+  align-content: start;
 }
 
 .metadata-modal__field {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .metadata-modal__field span {
@@ -1199,7 +1126,7 @@ watch(
   min-height: 120px;
   padding: 10px 12px;
   border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--surface-input-bg);
   color: var(--text-primary);
   font-family: inherit;
@@ -1211,7 +1138,7 @@ watch(
 }
 
 .metadata-modal__textarea:focus {
-  border-color: var(--accent-color);
+  border-color: var(--primary-color);
 }
 
 .metadata-modal__footer {
@@ -1228,17 +1155,16 @@ watch(
   }
 
   .book-detail-page__container {
-    gap: 20px;
+    gap: 24px;
   }
 
-  .detail-hero,
   .detail-grid,
   .metadata-modal__layout {
     grid-template-columns: 1fr;
   }
 
-  .detail-hero__cover {
-    min-height: 220px;
+  .metadata-modal__cover {
+    max-width: 200px;
   }
 }
 
@@ -1248,7 +1174,11 @@ watch(
   }
 
   .book-detail-page__container {
-    gap: 16px;
+    gap: 20px;
+  }
+
+  .detail-hero {
+    grid-template-columns: 1fr;
   }
 
   .book-detail-page__topbar,
@@ -1266,7 +1196,7 @@ watch(
 
   .detail-card__header,
   .detail-card__body {
-    padding: 16px 20px;
+    padding: 14px 16px;
   }
 
   .detail-rule-preview {
