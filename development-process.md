@@ -1,5 +1,9 @@
 # AI Task Template
 
+> **⚠️ 历史文档（归档）**：下文主体是项目开发早期的流程模板与原始需求记录，部分表述已失效
+> （例如"CORS 配置完成"——项目已改为纯同源部署，后端不再启用 CORS 中间件）。
+> 现行架构、命令与部署方式以根目录 `README.md` 和 `AGENTS.md` 为准。
+
 When implementing a new feature:
 
 1. Read AGENTS.md

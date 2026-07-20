@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -62,7 +62,8 @@ def test_frontend_nginx_proxies_all_backend_paths():
     assert "location /api/" in content
     assert "location /media/covers/" in content
     assert "location = /health" in content
-    assert "proxy_pass http://uika_book-backend:8000" in content
+    # 通过 Compose 服务名访问后端，而不是硬编码容器名。
+    assert "proxy_pass http://backend:8000" in content
 
 
 def test_vite_dev_server_proxies_all_backend_paths():

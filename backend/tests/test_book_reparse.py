@@ -1,4 +1,4 @@
-﻿from contextlib import contextmanager
+from contextlib import contextmanager
 
 from fastapi.testclient import TestClient
 
@@ -157,3 +157,70 @@ def test_reparse_book_returns_friendly_error_for_invalid_rule(monkeypatch, tmp_p
 
     assert response.status_code == 400
     assert response.json()["detail"].startswith("Failed to parse chapters")
+
+
+def test_reparse_book_clamps_out_of_range_reading_progress(monkeypatch, tmp_path):
+    with authenticated_client(monkeypatch, tmp_path) as client:
+        book = upload_book(client, "progress.txt", BOOK_TEXT)
+        rules_response = client.get("/api/chapter-rules")
+        full_text_rule_id = next(item["id"] for item in rules_response.json() if item["rule_name"] == "单章节全文模式")
+
+        # 模拟一个越界进度：chapter_index 超出重解析后的章节总数，offset 超出章节长度。
+        progress_response = client.put(
+            f"/api/books/{book['id']}/progress",
+            json={
+                "chapter_index": 5,
+                "char_offset": 99999,
+                "percent": 88.0,
+                "updated_at": "2026-01-01T00:00:00Z",
+            },
+        )
+        assert progress_response.status_code == 200
+
+        reparse_response = client.post(
+            f"/api/books/{book['id']}/reparse",
+            json={"chapter_rule_id": full_text_rule_id},
+        )
+        assert reparse_response.status_code == 200
+
+        progress_after = client.get(f"/api/books/{book['id']}/progress")
+
+    assert progress_after.status_code == 200
+    payload = progress_after.json()
+    # 重解析后只有 1 个“全文”章节：index 钳到 0，offset 钳到章节长度，percent 按前端公式重算。
+    assert payload["chapter_index"] == 0
+    assert payload["char_offset"] == len(BOOK_TEXT)
+    assert payload["percent"] == 100.0
+
+
+def test_reparse_book_keeps_in_range_reading_progress(monkeypatch, tmp_path):
+    with authenticated_client(monkeypatch, tmp_path) as client:
+        book = upload_book(client, "in-range.txt", BOOK_TEXT)
+        rules_response = client.get("/api/chapter-rules")
+        chinese_rule_id = next(item["id"] for item in rules_response.json() if item["rule_name"] == "中文章节规则")
+
+        progress_response = client.put(
+            f"/api/books/{book['id']}/progress",
+            json={
+                "chapter_index": 0,
+                "char_offset": 2,
+                "percent": 25.0,
+                "updated_at": "2026-01-01T00:00:00Z",
+            },
+        )
+        assert progress_response.status_code == 200
+
+        # 用相同规则重解析（章节结构不变），未越界进度必须原样保留。
+        reparse_response = client.post(
+            f"/api/books/{book['id']}/reparse",
+            json={"chapter_rule_id": chinese_rule_id},
+        )
+        assert reparse_response.status_code == 200
+
+        progress_after = client.get(f"/api/books/{book['id']}/progress")
+
+    assert progress_after.status_code == 200
+    payload = progress_after.json()
+    assert payload["chapter_index"] == 0
+    assert payload["char_offset"] == 2
+    assert payload["percent"] == 25.0

@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 
 from pydantic import Field
 
@@ -7,7 +7,7 @@ from app.schemas.common import ORMModel
 
 class ChapterRuleBase(ORMModel):
     rule_name: str = Field(min_length=1, max_length=100)
-    regex_pattern: str = Field(min_length=1)
+    regex_pattern: str = Field(min_length=1, max_length=500)
     flags: str = Field(default="", max_length=50)
     description: str | None = None
 
@@ -18,7 +18,7 @@ class ChapterRuleCreate(ChapterRuleBase):
 
 class ChapterRuleUpdate(ORMModel):
     rule_name: str | None = Field(default=None, min_length=1, max_length=100)
-    regex_pattern: str | None = Field(default=None, min_length=1)
+    regex_pattern: str | None = Field(default=None, min_length=1, max_length=500)
     flags: str | None = Field(default=None, max_length=50)
     description: str | None = None
     is_default: bool | None = None

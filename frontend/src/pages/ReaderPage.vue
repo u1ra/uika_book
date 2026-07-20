@@ -127,7 +127,7 @@
           >
             <template v-if="currentChapter">
               <template
-                v-for="(block, index) in currentChapterBlocks"
+                v-for="(block, index) in visibleChapterBlocks"
                 :key="`block-${currentChapterIndex}-${index}`"
               >
                 <p
@@ -145,6 +145,13 @@
                   />
                 </figure>
               </template>
+              <!-- 超长章节分批渲染的哨兵：进入视口附近时追加下一批 -->
+              <div
+                v-if="hasMoreBlocks"
+                ref="contentSentinelRef"
+                class="reader-content__sentinel"
+                aria-hidden="true"
+              ></div>
             </template>
             <template v-else>正文载入中...</template>
           </article>
@@ -380,9 +387,15 @@ import type {
 } from "../types/api";
 import PageStatusPanel from "../components/PageStatusPanel.vue";
 import { formatPercent } from "../utils/format";
+import { buildBlockCharPrefixSums, computeMeasurableRenderedLength, resolveMountedCountForOffset } from "../utils/reader-window";
+import { createRequestGuard } from "../utils/request-guard";
 import { authTokenStorage } from "../utils/token";
 
 const PROGRESS_THROTTLE_MS = 5000;
+const PERSIST_LOCAL_DEBOUNCE_MS = 300;
+// 超长章节（如“全文”降级）分批渲染的批次大小：初始挂载一批，滚动到底部附近再追加。
+// 块数不超过该值的章节永远全量挂载，渲染路径与之前完全一致。
+const CONTENT_RENDER_BATCH_SIZE = 200;
 const READER_SCROLL_ANCHOR = 120;
 const COMPACT_BREAKPOINT = 980;
 const MOBILE_CONTENT_WIDTH_MIN_PERCENT = 84;
@@ -461,11 +474,16 @@ const catalogListHeight = ref(0);
 const catalogJumpIndex = ref(0);
 
 let progressSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let persistLocalTimer: ReturnType<typeof setTimeout> | null = null;
+let scrollRafId: number | null = null;
 let saveInFlight = false;
 let queuedSnapshot: ProgressSnapshot | null = null;
 let lastSavedProgressKey = "";
 let suppressScrollTrackingUntil = 0;
 let catalogScrollToken = 0;
+// 切章/整页加载请求守卫：快速连点或 bookId 切换时，旧响应不得覆盖新状态。
+const chapterRequestGuard = createRequestGuard();
+const readerLoadGuard = createRequestGuard();
 
 const isCompactViewport = computed(() => viewportWidth.value <= COMPACT_BREAKPOINT);
 const shouldShowChrome = computed(() => !isCompactViewport.value || mobileChromeVisible.value);
@@ -504,6 +522,72 @@ const currentChapterContentView = computed<ReaderChapterContentView>(() => {
 });
 const currentChapterBody = computed(() => currentChapterContentView.value.body);
 const currentChapterBlocks = computed(() => buildReaderContentBlocks(currentChapterBody.value));
+// 分批渲染：visibleChapterBlocks 只包含已挂载部分；普通章节始终全量。
+const mountedBlockCount = ref(0);
+const blockCharPrefixSums = computed(() =>
+  buildBlockCharPrefixSums(
+    currentChapterBlocks.value.map((block) => (block.type === "paragraph" ? block.content.length : 0)),
+  ),
+);
+const totalBlockChars = computed(() => {
+  const sums = blockCharPrefixSums.value;
+  return sums.length > 0 ? sums[sums.length - 1] : 0;
+});
+const mountedBlockChars = computed(() =>
+  mountedBlockCount.value > 0 ? (blockCharPrefixSums.value[mountedBlockCount.value - 1] ?? 0) : 0,
+);
+const visibleChapterBlocks = computed(() => currentChapterBlocks.value.slice(0, mountedBlockCount.value));
+const hasMoreBlocks = computed(() => mountedBlockCount.value < currentChapterBlocks.value.length);
+const contentSentinelRef = ref<HTMLElement | null>(null);
+let contentSentinelObserver: IntersectionObserver | null = null;
+
+watch(currentChapterBlocks, (blocks) => {
+  // 切章后重置挂载窗口：超长章节先挂载首批，普通章节直接全量。
+  const canWindow = typeof IntersectionObserver !== "undefined";
+  mountedBlockCount.value = canWindow ? Math.min(blocks.length, CONTENT_RENDER_BATCH_SIZE) : blocks.length;
+});
+
+// 当前已挂载部分对应的可测量正文长度；全量挂载时严格等于正文长度（与旧行为一致）。
+function getMeasurableRenderedLength() {
+  return computeMeasurableRenderedLength(
+    currentChapterBody.value.length,
+    mountedBlockChars.value,
+    totalBlockChars.value,
+  );
+}
+
+function appendNextContentBatch() {
+  if (!hasMoreBlocks.value) {
+    return;
+  }
+  mountedBlockCount.value = Math.min(
+    mountedBlockCount.value + CONTENT_RENDER_BATCH_SIZE,
+    currentChapterBlocks.value.length,
+  );
+}
+
+// 恢复进度定位前，先确保目标位置所在的块已挂载。
+function ensureBlocksMountedForCharOffset(charOffset: number) {
+  const required = resolveMountedCountForOffset({
+    prefixSums: blockCharPrefixSums.value,
+    targetCharsInBody: clamp(charOffset - currentChapterTrimmedPrefixLength.value, 0, currentChapterBody.value.length),
+    renderedLength: currentChapterBody.value.length,
+    batchSize: CONTENT_RENDER_BATCH_SIZE,
+  });
+  if (required > mountedBlockCount.value) {
+    mountedBlockCount.value = required;
+  }
+}
+
+watch(contentSentinelRef, (element, previous) => {
+  if (previous && contentSentinelObserver) {
+    contentSentinelObserver.unobserve(previous);
+  }
+  if (element && contentSentinelObserver) {
+    contentSentinelObserver.observe(element);
+  }
+});
+
 const currentChapterTrimmedPrefixLength = computed(() => currentChapterContentView.value.trimmedPrefixLength);
 const currentChapterPositionLabel = computed(() => {
   if (chapters.value.length === 0) {
@@ -606,10 +690,31 @@ const catalogBottomPadding = computed(() =>
   Math.max(0, (chapters.value.length - catalogVirtualEnd.value) * CATALOG_ITEM_ESTIMATED_HEIGHT)
 );
 
+// 本地偏好 → store。store 被外部修改时由下方反向 watch 同步回来，
+// syncingPreferencesFromStore 防止两个 watch 互相触发。
+let syncingPreferencesFromStore = false;
+
 watch(
   preferences,
   (value) => {
+    if (syncingPreferencesFromStore) {
+      return;
+    }
     preferencesStore.patchReader(value);
+  },
+  { deep: true },
+);
+
+// store → 本地偏好：全局主题切换、服务端偏好回灌等外部修改后，
+// 本地副本保持同步，避免下一次本地操作把旧值整体覆盖回 store。
+watch(
+  () => preferencesStore.reader,
+  (value) => {
+    syncingPreferencesFromStore = true;
+    Object.assign(preferences, value);
+    void nextTick(() => {
+      syncingPreferencesFromStore = false;
+    });
   },
   { deep: true },
 );
@@ -703,6 +808,17 @@ onMounted(() => {
     return;
   }
 
+  if (typeof IntersectionObserver !== "undefined") {
+    contentSentinelObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          appendNextContentBatch();
+        }
+      },
+      { rootMargin: "800px 0px" },
+    );
+  }
+
   syncViewportState();
   window.addEventListener("resize", handleWindowResize, { passive: true });
   window.addEventListener("scroll", handleWindowScroll, { passive: true });
@@ -715,6 +831,21 @@ onUnmounted(() => {
   clearScheduledProgressSync();
   catalogScrollToken += 1;
   catalogItemRefs.clear();
+  contentSentinelObserver?.disconnect();
+  contentSentinelObserver = null;
+  // 使进行中的切章/加载请求失效，卸载后不得再写状态。
+  chapterRequestGuard.invalidate();
+  readerLoadGuard.invalidate();
+
+  if (scrollRafId !== null && typeof window !== "undefined") {
+    window.cancelAnimationFrame(scrollRafId);
+    scrollRafId = null;
+  }
+  if (persistLocalTimer !== null && typeof window !== "undefined") {
+    // 卸载时会直接保存当前快照（见下方），清掉防抖定时器避免旧快照覆盖。
+    window.clearTimeout(persistLocalTimer);
+    persistLocalTimer = null;
+  }
 
   if (typeof window === "undefined") {
     return;
@@ -750,9 +881,8 @@ function getLocalProgressKey(bookId: number): string {
 function saveProgressToLocal(bookId: number, snapshot: ProgressSnapshot) {
   if (typeof window === "undefined") return;
   try {
-    const payload = JSON.stringify(snapshot);
-    localStorage.setItem(getLocalProgressKey(bookId), payload);
-    sessionStorage.setItem(getLocalProgressKey(bookId), payload);
+    // 只写 localStorage；读取端保留 sessionStorage fallback 以兼容旧版本写入的数据。
+    localStorage.setItem(getLocalProgressKey(bookId), JSON.stringify(snapshot));
   } catch {
     // ignore
   }
@@ -1170,12 +1300,15 @@ function getViewportCharOffset() {
     return clamp(currentChapterTrimmedPrefixLength.value, 0, chapterLength);
   }
 
+  // 分批渲染时按已挂载部分的可测量长度换算，全量挂载时与原逻辑一致。
+  const measurableLength = getMeasurableRenderedLength();
+
   const rect = contentRef.value.getBoundingClientRect();
   const elementTop = rect.top + window.scrollY;
   const scrollableHeight = Math.max(contentRef.value.scrollHeight - window.innerHeight * 0.58, 1);
   const focusY = window.scrollY + Math.min(window.innerHeight * 0.32, 220);
   const ratio = clamp((focusY - elementTop) / scrollableHeight, 0, 1);
-  const renderedOffset = Math.round(renderedLength * ratio);
+  const renderedOffset = Math.round(measurableLength * ratio);
 
   return clamp(currentChapterTrimmedPrefixLength.value + renderedOffset, 0, chapterLength);
 }
@@ -1200,11 +1333,28 @@ function syncSessionProgressFromViewport() {
 
   hasMeaningfulReadingActivity.value = true;
   sessionProgress.value = snapshot;
-  saveProgressToLocal(props.bookId, snapshot);
+  schedulePersistLocalSnapshot(snapshot);
   scheduleProgressSync();
 }
 
+// 滚动停止 300ms 后才写 localStorage：滚动期间只更新内存态，避免每帧写存储。
+function schedulePersistLocalSnapshot(snapshot: ProgressSnapshot) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (persistLocalTimer !== null) {
+    window.clearTimeout(persistLocalTimer);
+  }
+  persistLocalTimer = window.setTimeout(() => {
+    persistLocalTimer = null;
+    saveProgressToLocal(props.bookId, snapshot);
+  }, PERSIST_LOCAL_DEBOUNCE_MS);
+}
+
 async function restoreScrollForCharOffset(charOffset: number, smoothScroll = false) {
+  // 分批渲染场景下，先确保目标位置所在的块已挂载，再计算滚动位置。
+  ensureBlocksMountedForCharOffset(charOffset);
+
   // 多轮重试，确保 DOM 和字体渲染完成后再计算 scroll 位置
   let attempts = 0;
   const maxAttempts = 5;
@@ -1229,12 +1379,13 @@ async function restoreScrollForCharOffset(charOffset: number, smoothScroll = fal
       continue;
     }
 
+    const measurableLength = getMeasurableRenderedLength();
     const adjustedCharOffset = clamp(
       charOffset - currentChapterTrimmedPrefixLength.value,
       0,
       renderedLength,
     );
-    const ratio = clamp(adjustedCharOffset / renderedLength, 0, 1);
+    const ratio = clamp(measurableLength > 0 ? adjustedCharOffset / measurableLength : 0, 0, 1);
     const rect = contentRef.value.getBoundingClientRect();
     const elementTop = rect.top + window.scrollY;
     const scrollableHeight = Math.max(
@@ -1273,6 +1424,9 @@ async function loadBookDetailSafely(bookId: number) {
 }
 
 async function loadReader() {
+  const loadId = readerLoadGuard.next();
+  // 新一轮加载使进行中的切章请求失效，避免旧章节内容覆盖新书籍状态。
+  chapterRequestGuard.invalidate();
   loading.value = true;
   pageError.value = null;
   chapterError.value = null;
@@ -1300,6 +1454,11 @@ async function loadReader() {
       chaptersPromise,
       progressPromise,
     ]);
+
+    if (!readerLoadGuard.isCurrent(loadId)) {
+      // bookId 已切换或组件已卸载，丢弃过期加载结果。
+      return;
+    }
 
     bookTitle.value = bookDetail?.title || cachedBookDetail?.title || "";
     chapters.value = chapterList;
@@ -1338,6 +1497,9 @@ async function loadReader() {
     // 如果使用了缓存，后台静默刷新最新数据
     if (cachedChapters) {
       void booksApi.chapters(props.bookId).then((fresh) => {
+        if (!readerLoadGuard.isCurrent(loadId)) {
+          return;
+        }
         chapters.value = fresh;
         booksCacheStore.set(props.bookId, { chapters: fresh });
       }).catch(() => {
@@ -1374,6 +1536,9 @@ async function loadReader() {
       restoreCharOffset,
     });
   } catch (error) {
+    if (!readerLoadGuard.isCurrent(loadId)) {
+      return;
+    }
     bookTitle.value = "";
     chapters.value = [];
     progress.value = null;
@@ -1381,7 +1546,7 @@ async function loadReader() {
     currentChapter.value = null;
     pageError.value = getErrorMessage(error);
   } finally {
-    if (loading.value) {
+    if (readerLoadGuard.isCurrent(loadId) && loading.value) {
       loading.value = false;
     }
   }
@@ -1493,11 +1658,16 @@ async function openChapter(
   }
 
   const normalizedIndex = normalizeChapterIndex(chapterIndex);
+  const requestId = chapterRequestGuard.next();
   chapterLoading.value = true;
   chapterError.value = null;
 
   try {
     const content = await booksApi.chapterContent(props.bookId, normalizedIndex);
+    if (!chapterRequestGuard.isCurrent(requestId)) {
+      // 期间已发起更新的切章请求，丢弃这个过期响应。
+      return;
+    }
     const restoreCharOffset = clamp(
       options.restoreCharOffset ?? 0,
       0,
@@ -1532,6 +1702,9 @@ async function openChapter(
       });
     }
   } catch (error) {
+    if (!chapterRequestGuard.isCurrent(requestId)) {
+      return;
+    }
     const message = getErrorMessage(error);
 
     if (!currentChapter.value) {
@@ -1540,7 +1713,9 @@ async function openChapter(
       chapterError.value = message;
     }
   } finally {
-    chapterLoading.value = false;
+    if (chapterRequestGuard.isCurrent(requestId)) {
+      chapterLoading.value = false;
+    }
   }
 }
 
@@ -1555,7 +1730,13 @@ function handleWindowScroll() {
     return;
   }
 
-  syncSessionProgressFromViewport();
+  // rAF 合并：每帧最多做一次 DOM 测量与响应式写入，避免滚动期持续 jank。
+  if (scrollRafId === null) {
+    scrollRafId = window.requestAnimationFrame(() => {
+      scrollRafId = null;
+      syncSessionProgressFromViewport();
+    });
+  }
 
   if (isCompactViewport.value && mobileChromeVisible.value && !activeDrawer.value) {
     mobileChromeVisible.value = false;
@@ -1592,8 +1773,9 @@ function handleVisibilityChange() {
     return;
   }
 
-  // 不覆盖 localStorage，避免与 saveSnapshotBeforeNavigate 竞态
-  // keepalive flushProgress 成功后会自动 clearProgressLocal
+  // 不覆盖 localStorage，避免与 saveSnapshotBeforeNavigate 竞态。
+  // 注意：keepalive 分支无法拿到响应结果，不会 clearProgressLocal；
+  // 本地备份会保留到下次加载时参与进度合并（见 loadReader 的合并策略），属预期行为。
   void flushProgress("visibilitychange", {
     keepalive: true,
     force: true,
@@ -1966,6 +2148,11 @@ function goToBookshelf() {
 
 .reader-content__image-block {
   margin: 0;
+}
+
+.reader-content__sentinel {
+  height: 1px;
+  margin-top: calc(var(--reader-font-size) * var(--reader-line-height) * var(--reader-paragraph-spacing));
 }
 
 .reader-content__image {
