@@ -16,7 +16,7 @@ from app.services.book_groups import BookGroupError, ensure_default_group, get_u
 from app.services.chapter_rules import get_default_rule, get_visible_rule
 from app.services.chapter_splitter import ChapterSegment, split_book_into_chapters
 from app.utils.datetime import ensure_utc_datetime
-from app.utils.encoding import EncodingDetectionError, detect_text_encoding
+from app.utils.encoding import EncodingDetectionError, detect_text_encoding, normalize_text_newlines
 from app.utils.regex import FULL_TEXT_FLAG, FULL_TEXT_PATTERN, RegexRuleError
 
 
@@ -207,7 +207,10 @@ def update_user_book_metadata(
 
 def read_book_text(book: Book) -> str:
     try:
-        return Path(book.file_path).read_text(encoding=book.encoding)
+        # Read without implicit newline conversion, then apply the same canonical
+        # representation used when chapter offsets are created.
+        with open(book.file_path, "r", encoding=book.encoding, newline="") as f:
+            return normalize_text_newlines(f.read())
     except FileNotFoundError as exc:
         raise BookReadError("Book file not found") from exc
     except UnicodeDecodeError as exc:
@@ -218,7 +221,9 @@ def read_book_text(book: Book) -> str:
 
 def read_book_chapter_content(book: Book, chapter: BookChapter) -> str:
     try:
-        with open(book.file_path, "r", encoding=book.encoding) as f:
+        # newline=None exposes the canonical LF character stream to f.read(n),
+        # so offsets remain Python Unicode character positions rather than bytes.
+        with open(book.file_path, "r", encoding=book.encoding, newline=None) as f:
             start_offset = max(0, chapter.start_offset)
             if start_offset > 0:
                 skipped = f.read(start_offset)
@@ -349,7 +354,8 @@ def create_uploaded_book(
         raise BookUploadError("Uploaded file is empty")
 
     try:
-        _, text = detect_text_encoding(raw_bytes)
+        _, decoded_text = detect_text_encoding(raw_bytes)
+        text = normalize_text_newlines(decoded_text)
     except EncodingDetectionError as exc:
         raise BookUploadError(str(exc)) from exc
 
@@ -367,7 +373,9 @@ def create_uploaded_book(
     normalized_path = normalized_dir / f"{book_uuid}.txt"
 
     raw_path.write_bytes(raw_bytes)
-    normalized_path.write_text(text, encoding=settings.default_txt_encoding)
+    # Always persist the same LF-only text that was passed to the splitter.
+    # newline="\n" also prevents platform-specific write translation on Windows.
+    normalized_path.write_text(text, encoding=settings.default_txt_encoding, newline="\n")
 
     book = Book(
         user_id=user.id,
@@ -587,4 +595,3 @@ def _build_cover_url(cover_path: str | None) -> str | None:
     except ValueError:
         return None
     return f"{COVER_URL_PREFIX}/{relative_path}"
-

@@ -5,6 +5,11 @@ class EncodingDetectionError(ValueError):
     pass
 
 
+def normalize_text_newlines(text: str) -> str:
+    """Return the canonical text representation used by chapter offsets."""
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
 def detect_text_encoding(raw_bytes: bytes) -> tuple[str, str]:
     if not raw_bytes:
         return "utf-8", ""
