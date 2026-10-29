@@ -14,9 +14,9 @@ export default defineConfig({
         short_name: "初华的书",
         description: "个人 TXT 在线阅读器",
         // theme_color 影响 Chrome 安卓 PWA 的系统 UI 颜色。
-        // 与浅色主题暖纸白一致；暗色主题下由 stores/app-theme.ts 运行时切换。
-        theme_color: "#F7F4ED",
-        background_color: "#14120F",
+        // 与浅色主题星光薰衣草白一致；暗色主题下由 stores/app-theme.ts 运行时切换。
+        theme_color: "#F8F6FF",
+        background_color: "#0D0B14",
         display: "standalone",
         orientation: "portrait",
         scope: "/",
@@ -36,7 +36,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        navigateFallbackDenylist: [/^\/api/, /^\/health/],
+        navigateFallbackDenylist: [/^\/api/, /^\/media\/covers/, /^\/health/],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
       },
     }),
   ],

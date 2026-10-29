@@ -4,7 +4,7 @@ import { dismissNotification, notificationDialogState, notify } from "../notify"
 
 describe("notify", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   });
 
   afterEach(() => {

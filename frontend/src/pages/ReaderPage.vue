@@ -336,6 +336,29 @@
 
             <section class="reader-settings__group">
               <div class="reader-settings__label-row">
+                <span>正文字体</span>
+                <strong>{{ preferences.fontFamily === 'system' ? '系统字体' : '霞鹜文楷' }}</strong>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <label
+                  class="reader-radio"
+                  :class="{ 'reader-radio--active': preferences.fontFamily === 'lxgwwenkai' }"
+                >
+                  <input v-model="preferences.fontFamily" type="radio" value="lxgwwenkai" class="sr-only" />
+                  <span>霞鹜文楷</span>
+                </label>
+                <label
+                  class="reader-radio"
+                  :class="{ 'reader-radio--active': preferences.fontFamily === 'system' }"
+                >
+                  <input v-model="preferences.fontFamily" type="radio" value="system" class="sr-only" />
+                  <span>系统字体</span>
+                </label>
+              </div>
+            </section>
+
+            <section class="reader-settings__group">
+              <div class="reader-settings__label-row">
                 <span>字间距</span>
                 <strong>{{ preferences.letterSpacing.toFixed(2) }}px</strong>
               </div>
@@ -1877,44 +1900,45 @@ function goToBookshelf() {
 
 .reader-page--light {
   color-scheme: light;
-  /* 沉浸阅读风浅色：暖纸白底 + 墨色文字 + 低饱和陶棕点缀 */
-  --reader-page-bg: #F7F4ED;
-  --reader-panel-bg: rgba(253, 251, 246, 0.78);
-  --reader-panel-border: rgba(154, 98, 56, 0.14);
-  --reader-panel-shadow: 0 16px 40px rgba(120, 96, 66, 0.1);
-  --reader-paper-bg: #FDFBF6;
-  --reader-heading: #2E2921;
-  --reader-body: #38322A;
-  --reader-muted: #6F675B;
-  --reader-accent: #9A6238;
-  --reader-progress-rail: rgba(154, 98, 56, 0.16);
-  --reader-action-bg: rgba(154, 98, 56, 0.06);
-  --reader-action-hover: rgba(154, 98, 56, 0.12);
-  --reader-settings-bg: rgba(154, 98, 56, 0.05);
-  --reader-settings-border: rgba(154, 98, 56, 0.1);
+  /* 初华二次元风浅色阅读：微光淡紫护眼底 + 柔和象牙纸白 + 紫金点缀 */
+  --reader-page-bg: #F5F3FA;
+  --reader-panel-bg: rgba(255, 255, 255, 0.86);
+  --reader-panel-border: rgba(124, 92, 230, 0.16);
+  --reader-panel-shadow: 0 18px 44px -8px rgba(96, 68, 198, 0.14);
+  --reader-paper-bg: #FCFBF9;
+  --reader-heading: #231E36;
+  --reader-body: #2D2740;
+  --reader-muted: #6E6687;
+  --reader-accent: #7C5CE6;
+  --reader-gold: #D49B35;
+  --reader-progress-rail: rgba(124, 92, 230, 0.16);
+  --reader-action-bg: rgba(124, 92, 230, 0.07);
+  --reader-action-hover: rgba(124, 92, 230, 0.14);
+  --reader-settings-bg: rgba(124, 92, 230, 0.05);
+  --reader-settings-border: rgba(124, 92, 230, 0.13);
 }
 
 .reader-page--dark {
   color-scheme: dark;
   /* 纯色背景兜底，彻底消除渐变 banding 和跨设备渲染差异 */
-  background-color: #14120F;
+  background-color: #0D0B14;
   background: var(--reader-page-bg);
-  /* 沉浸阅读风深色：暖炭底 + 暖灰文字 + 暖檀点缀 */
-  --reader-page-bg: #14120F;
-  --reader-panel-bg: rgba(38, 34, 28, 0.88);
-  /* 夜间模式下边框改为透明，彻底杜绝白线 */
-  --reader-panel-border: rgba(210, 155, 108, 0.1);
-  --reader-panel-shadow: 0 20px 56px rgba(0, 0, 0, 0.4);
-  --reader-paper-bg: #1C1915;
-  --reader-heading: #EDE5D8;
-  --reader-body: #D9CEBB;
-  --reader-muted: #A79B8A;
-  --reader-accent: #D29B6C;
-  --reader-progress-rail: rgba(210, 155, 108, 0.16);
-  --reader-action-bg: rgba(210, 155, 108, 0.06);
-  --reader-action-hover: rgba(210, 155, 108, 0.12);
-  --reader-settings-bg: rgba(210, 155, 108, 0.05);
-  --reader-settings-border: rgba(210, 155, 108, 0.1);
+  /* 初华二次元风深色阅读：星夜深紫黑底 + 柔炭紫纸面 + 星辉薰衣草点缀 */
+  --reader-page-bg: #0D0B14;
+  --reader-panel-bg: rgba(27, 23, 43, 0.9);
+  --reader-panel-border: rgba(167, 139, 250, 0.14);
+  --reader-panel-shadow: 0 20px 56px rgba(0, 0, 0, 0.52);
+  --reader-paper-bg: #151221;
+  --reader-heading: #F2EEFF;
+  --reader-body: #DFD8F0;
+  --reader-muted: #9E95B8;
+  --reader-accent: #A78BFA;
+  --reader-gold: #F0C265;
+  --reader-progress-rail: rgba(167, 139, 250, 0.18);
+  --reader-action-bg: rgba(167, 139, 250, 0.08);
+  --reader-action-hover: rgba(167, 139, 250, 0.16);
+  --reader-settings-bg: rgba(167, 139, 250, 0.06);
+  --reader-settings-border: rgba(167, 139, 250, 0.13);
 }
 
 .reader-page--dark .reader-glass {
@@ -2069,17 +2093,27 @@ function goToBookshelf() {
 
 .reader-stage__book {
   margin: 0;
-  color: var(--reader-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--reader-accent);
   font-size: 13px;
-  letter-spacing: 0.1em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.reader-stage__book::before {
+  content: "✦";
+  color: var(--reader-gold, var(--reader-accent));
+  font-size: 11px;
 }
 
 .reader-stage__title {
   margin: 0;
   color: var(--reader-heading);
-  font-family: var(--font-display);
+  font-family: var(--reader-font-family, var(--font-display));
   font-size: clamp(26px, 3.4vw, 38px);
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.3;
   text-wrap: balance;
@@ -2122,6 +2156,7 @@ function goToBookshelf() {
   max-width: 100%;
   margin: 0 auto;
   color: var(--reader-body);
+  font-family: var(--reader-font-family, var(--font-sans));
   font-size: var(--reader-font-size);
   line-height: var(--reader-line-height);
   letter-spacing: var(--reader-letter-spacing);
@@ -2226,9 +2261,18 @@ function goToBookshelf() {
 }
 
 .reader-drawer__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--reader-heading);
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 800;
+}
+
+.reader-drawer__title::before {
+  content: "✦";
+  color: var(--reader-gold, var(--reader-accent));
+  font-size: 13px;
 }
 
 .reader-drawer__close {
@@ -2270,11 +2314,11 @@ function goToBookshelf() {
 }
 
 .reader-page--light .reader-catalog__list {
-  scrollbar-color: rgba(154, 98, 56, 0.4) transparent;
+  scrollbar-color: rgba(124, 92, 230, 0.38) transparent;
 }
 
 .reader-page--dark .reader-catalog__list {
-  scrollbar-color: rgba(210, 155, 108, 0.35) transparent;
+  scrollbar-color: rgba(167, 139, 250, 0.35) transparent;
 }
 
 .reader-catalog__list::-webkit-scrollbar {
@@ -2296,21 +2340,21 @@ function goToBookshelf() {
 }
 
 .reader-page--light .reader-catalog__list::-webkit-scrollbar-thumb {
-  background: rgba(154, 98, 56, 0.4);
+  background: rgba(124, 92, 230, 0.38);
   border-radius: 999px;
 }
 
 .reader-page--light .reader-catalog__list::-webkit-scrollbar-thumb:hover {
-  background: rgba(154, 98, 56, 0.6);
+  background: rgba(124, 92, 230, 0.58);
 }
 
 .reader-page--dark .reader-catalog__list::-webkit-scrollbar-thumb {
-  background: rgba(210, 155, 108, 0.35);
+  background: rgba(167, 139, 250, 0.35);
   border-radius: 999px;
 }
 
 .reader-page--dark .reader-catalog__list::-webkit-scrollbar-thumb:hover {
-  background: rgba(210, 155, 108, 0.55);
+  background: rgba(167, 139, 250, 0.55);
 }
 
 .reader-catalog__item {
@@ -2575,7 +2619,7 @@ function goToBookshelf() {
 
 .reader-progress-bar {
   width: 100%;
-  height: 4px;
+  height: 5px;
   border-radius: 999px;
   background: var(--reader-progress-rail);
   overflow: hidden;
@@ -2584,7 +2628,7 @@ function goToBookshelf() {
 .reader-progress-bar__fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--reader-accent);
+  background: linear-gradient(90deg, var(--reader-accent) 0%, var(--reader-gold, var(--reader-accent)) 100%);
   transition: width 300ms ease;
 }
 

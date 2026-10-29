@@ -65,8 +65,8 @@ export const DEFAULT_READER_PREFERENCES: ReaderPreferencesState = {
   paragraphSpacing: 1,
   contentWidth: 72,
   theme: "light",
-  // UI 主题默认值：陶棕（沉浸阅读风）、大圆角、霞鹜文楷
-  themeColor: "#9A6238",
+  // UI 主题默认值：初华紫（二次元角色印象风）、大圆角、正文字体默认霞鹜文楷
+  themeColor: "#7C5CE6",
   borderRadius: "soft",
   fontFamily: "lxgwwenkai",
 };
@@ -124,21 +124,23 @@ function normalizeReaderPreferences(input?: Partial<ReaderPreferencesState>): Re
   };
 }
 
-/** 校验并归一化十六进制颜色值，仅接受 #RRGGBB 格式，非法输入回退到默认值 */
+/** 校验并归一化十六进制颜色值，仅接受 #RRGGBB 格式，历史默认色（旧版陶棕 #9a6238 / 樱花粉 #f4a4b4）自动迁移为初华紫，非法输入回退到默认值 */
 function _normalizeHexColor(value: unknown, fallback: string): string {
   if (typeof value !== "string") {
-    return fallback;
+    return fallback.toLowerCase();
   }
   const trimmed = value.trim();
   if (trimmed.length === 7 && trimmed.startsWith("#")) {
-    try {
-      parseInt(trimmed.slice(1), 16);
-      return trimmed.toLowerCase();
-    } catch {
-      // 非法十六进制，回退默认值
+    const parsed = Number.parseInt(trimmed.slice(1), 16);
+    if (!Number.isNaN(parsed)) {
+      const normalized = trimmed.toLowerCase();
+      if (normalized === "#9a6238" || normalized === "#f4a4b4") {
+        return fallback.toLowerCase();
+      }
+      return normalized;
     }
   }
-  return fallback;
+  return fallback.toLowerCase();
 }
 
 function fromApiBookshelfPreferences(input: ApiBookshelfPreferences): BookshelfPreferencesState {
@@ -494,15 +496,20 @@ export const usePreferencesStore = defineStore("preferences", {
       if (typeof document === "undefined") {
         return;
       }
-      // 将用户自定义主题色注入 CSS 变量，覆盖 index.css 中的默认值
-      document.documentElement.style.setProperty("--primary-color", this.reader.themeColor);
-      // 根据字体选择动态调整全局字体栈
-      const fontFamily = this.reader.fontFamily === "lxgwwenkai"
-        ? '"LXGW WenKai", "PingFang SC", "Microsoft YaHei", sans-serif'
-        : '"PingFang SC", "Microsoft YaHei", sans-serif';
-      document.documentElement.style.setProperty("--font-sans", fontFamily);
+      // 将用户自定义主题色注入 CSS 变量；若为默认初华紫则交由 index.css 的亮/暗模式自动接管
+      const defaultHex = DEFAULT_READER_PREFERENCES.themeColor.toLowerCase();
+      if (this.reader.themeColor.toLowerCase() === defaultHex) {
+        document.documentElement.style.removeProperty("--primary-color");
+      } else {
+        document.documentElement.style.setProperty("--primary-color", this.reader.themeColor);
+      }
+      // 双轨字体：全局 UI 保持现代圆润无衬线，阅读器正文通过 --reader-font-family 独立切换霞鹜文楷/系统字体
+      const readerFontFamily = this.reader.fontFamily === "lxgwwenkai"
+        ? '"LXGW WenKai", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif'
+        : '"Plus Jakarta Sans", "HarmonyOS Sans SC", "MiSans", "PingFang SC", "Microsoft YaHei", sans-serif';
+      document.documentElement.style.setProperty("--reader-font-family", readerFontFamily);
       // 根据圆角风格调整全局圆角：soft 模式更圆润，standard 模式更克制
-      const radiusBase = this.reader.borderRadius === "soft" ? 22 : 12;
+      const radiusBase = this.reader.borderRadius === "soft" ? 22 : 14;
       document.documentElement.style.setProperty("--radius-lg", `${radiusBase}px`);
       document.documentElement.style.setProperty("--radius-xl", `${radiusBase + 6}px`);
     },

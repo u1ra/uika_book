@@ -18,7 +18,7 @@
         至少选择一个分组后才能保存。
       </Alert>
 
-      <div v-if="groups.length === 0" class="flex flex-col items-center justify-center py-8 text-gray-500">
+      <div v-if="groups.length === 0" class="flex flex-col items-center justify-center py-8 text-[var(--text-secondary)]">
         <p>当前还没有可选分组</p>
         <p class="text-sm">请先去创建分组。</p>
       </div>
@@ -108,8 +108,9 @@ function handleSubmit() {
 .group-selector__intro {
   margin-bottom: 16px;
   padding: 16px 18px;
+  border: 1px solid var(--border-color-soft);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.58);
+  background: var(--surface-panel-soft-bg);
 }
 
 .group-selector__intro p {

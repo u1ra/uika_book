@@ -216,3 +216,27 @@ notify.info("提示信息");
 - 阅读页仅做视觉与 chrome 重设计，**进度定位几何零改动**：window 级滚动、`contentRef` 单一长容器、`trimmedPrefixLength` 标题裁剪换算、`READER_SCROLL_ANCHOR`、节流/keepalive/本地备份/进度合并策略全部保留
 - 目录虚拟滚动常量 `CATALOG_ITEM_ESTIMATED_HEIGHT = 82` 未变（条目 padding 未改）；今后改目录条目样式时必须同步该常量
 - 阅读页 `.reader-page--light/dark` 两套 `--reader-*` 变量已换为新配色，但 `preferences.reader.theme` 仍只有 light/dark 两档（API 语义未变）
+
+---
+
+# 2026-10 初华角色印象二次元风 UI 重构（Uika Starry Edition）
+
+## 概述
+
+全站前端视觉体系重构为 **「初华（Uika）角色印象风：薰衣草紫 + 星芒香槟金」** 二次元风格，后端接口、数据库结构与阅读进度定位几何逻辑零改动。
+
+## 核心设计规范
+
+- **浅色（Daylight Starlight）**：星光薰衣草白底（`#F8F6FF` → `#F2EEFA` + 紫金微光径向光晕），晶透毛玻璃卡片 `rgba(255, 255, 255, 0.86)`，深紫黑文字 `#231E36` / `#6E6687`，主色初华紫 `#7C5CE6`，点缀星芒香槟金 `#D49B35`
+- **深色（Nocturne Starry Night）**：星夜深紫黑底（`#141122` → `#0D0B14`），毛玻璃卡片 `rgba(28, 24, 44, 0.86)`，文字 `#F2EEFF` / `#9E95B8`，主色星辉薰衣草 `#A78BFA`，点缀夜空星芒金 `#F0C265`
+- **双轨字体体系**：
+  - 全局 UI（`--font-sans` / `--font-display`）：现代圆润无衬线字体栈（`"Plus Jakarta Sans", "Nunito", "HarmonyOS Sans SC", "MiSans", "PingFang SC"`）
+  - 阅读器正文（`--reader-font-family`）：由 `stores/preferences.ts` 独立控制，支持在阅读页设置抽屉中切换「霞鹜文楷 / 系统字体」
+- **书架双视图切换**：`BookshelfPage.vue` 支持「海报网格（`grid`，默认竖版 3:4 轻小说封面卡）」与「详细列表（`list`）」切换，状态持久化于 `localStorage`（`uika_book.bookshelf-view`）
+- **阅读页护眼平衡**：外围工具栏与抽屉全面毛玻璃二次元化，正文纸面采用护眼微光淡紫/象牙白（`#F5F3FA` / `#FCFBF9`）与星夜柔炭紫（`#0D0B14` / `#151221`）
+- **五处主题色同步点**：
+  1. `index.html`（`theme-color: #F8F6FF`，内联兜底 `#0D0B14`）
+  2. `vite.config.ts`（PWA manifest `theme_color: "#F8F6FF"`, `background_color: "#0D0B14"`）
+  3. `stores/app-theme.ts`（`applyThemeToDocument` 动态切换 `#F8F6FF` / `#0D0B14`）
+  4. `styles/index.css`（`:root` 与 `body.app-theme--dark`）
+  5. `stores/preferences.ts`（`DEFAULT_READER_PREFERENCES.themeColor = "#7C5CE6"`，并自动将旧版默认陶棕 `#9a6238` 迁移至 `#7c5ce6`）

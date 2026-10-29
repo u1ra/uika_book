@@ -2,34 +2,55 @@
   <div class="login-page">
     <main class="login-page__panel">
       <section class="login-page__intro">
-        <div class="login-page__eyebrow">初华的书</div>
-        <h1 class="login-page__title">
-          <span>把喜欢的故事，</span>
-          <span>留在自己的书架里。</span>
-        </h1>
+        <div class="login-page__character-card">
+          <div class="login-page__portrait-ring">
+            <img class="login-page__portrait" src="/icon-source.png" alt="初华的书" />
+          </div>
+          <div class="login-page__character-meta">
+            <div class="login-page__eyebrow">
+              <span aria-hidden="true">✦</span>
+              <span>UIKA STARLIGHT LIBRARY</span>
+            </div>
+            <h1 class="login-page__title">
+              <span>把喜欢的故事，</span>
+              <span class="login-page__title-highlight">留在初华的书架里。</span>
+            </h1>
+          </div>
+        </div>
+
         <p class="login-page__description">
           上传 TXT，整理章节，安静地读下去。阅读位置会自动保存，下次打开时可以接着上次停下的地方继续。
         </p>
 
         <ul class="login-page__feature-list" aria-label="阅读器主要功能">
           <li class="login-page__feature-item">
-            <strong>TXT 私人书架</strong>
-            <span>上传、整理和查找自己的本地书籍</span>
+            <span class="login-page__feature-icon" aria-hidden="true">✦</span>
+            <div>
+              <strong>TXT 私人书架</strong>
+              <span>支持海报网格与列表双视图，轻松整理本地藏书</span>
+            </div>
           </li>
           <li class="login-page__feature-item">
-            <strong>章节目录</strong>
-            <span>自动识别章节，也支持自定义目录规则</span>
+            <span class="login-page__feature-icon" aria-hidden="true">✦</span>
+            <div>
+              <strong>章节目录解析</strong>
+              <span>内置多种章节规则，也支持自定义正则与实时预览</span>
+            </div>
           </li>
           <li class="login-page__feature-item">
-            <strong>阅读进度</strong>
-            <span>按章节和阅读位置保存，下次打开继续阅读</span>
+            <span class="login-page__feature-icon" aria-hidden="true">✦</span>
+            <div>
+              <strong>跨端阅读进度</strong>
+              <span>按章节与字符偏移精准保存，随时无缝续读</span>
+            </div>
           </li>
         </ul>
       </section>
 
       <section class="login-page__form">
+        <div class="login-page__form-badge" aria-hidden="true">✦ WELCOME BACK</div>
         <div class="login-page__form-header">
-          <h2 class="login-page__form-title">登录</h2>
+          <h2 class="login-page__form-title">登录书架</h2>
           <p class="login-page__form-subtitle">{{ redirectHint }}</p>
         </div>
 
@@ -68,7 +89,7 @@
             class="login-page__submit"
             :disabled="authStore.loginPending"
           >
-            {{ authStore.loginPending ? "登录中..." : "登录并进入书架" }}
+            {{ authStore.loginPending ? "登录中..." : "登录并进入书架 ✦" }}
           </Button>
         </form>
 
@@ -144,39 +165,74 @@ async function handleLogin() {
 }
 
 .login-page__panel {
-  width: min(960px, 100%);
+  width: min(1020px, 100%);
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: clamp(32px, 6vw, 72px);
+  grid-template-columns: 1.15fr 0.95fr;
+  gap: clamp(32px, 5vw, 64px);
   align-items: center;
 }
 
-/* 品牌区：纯排版，无卡片 */
 .login-page__intro {
   display: grid;
-  gap: 20px;
+  gap: 22px;
   align-content: center;
+}
+
+.login-page__character-card {
+  display: grid;
+  gap: 18px;
+}
+
+.login-page__portrait-ring {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  padding: 4px;
+  border-radius: 34px;
+  background: var(--brand-gradient);
+  box-shadow: 0 16px 36px var(--primary-glow);
+}
+
+.login-page__portrait {
+  width: 100%;
+  height: 100%;
+  border-radius: 30px;
+  object-fit: cover;
+  display: block;
+  background: var(--surface-color);
+}
+
+.login-page__character-meta {
+  display: grid;
+  gap: 12px;
 }
 
 .login-page__eyebrow {
   display: inline-flex;
+  align-items: center;
+  gap: 6px;
   width: fit-content;
-  padding: 5px 12px;
-  border: 1px solid var(--border-color-soft);
+  padding: 5px 14px;
+  border: 1px solid var(--border-color);
   border-radius: 999px;
+  background: var(--primary-soft);
   color: var(--primary-color);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
   letter-spacing: 0.14em;
+}
+
+.login-page__eyebrow span:first-child {
+  color: var(--accent-color);
 }
 
 .login-page__title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(34px, 4.5vw, 50px);
-  font-weight: 500;
+  font-size: clamp(32px, 4.2vw, 46px);
+  font-weight: 800;
   letter-spacing: -0.02em;
-  line-height: 1.18;
+  line-height: 1.22;
   text-wrap: balance;
 }
 
@@ -184,49 +240,90 @@ async function handleLogin() {
   display: block;
 }
 
+.login-page__title-highlight {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 .login-page__description {
   margin: 0;
-  max-width: 42ch;
+  max-width: 44ch;
   color: var(--text-secondary);
-  line-height: 1.9;
+  font-size: 15px;
+  line-height: 1.8;
 }
 
 .login-page__feature-list {
   display: grid;
-  gap: 0;
-  margin: 8px 0 0;
+  gap: 10px;
+  margin: 4px 0 0;
   padding: 0;
   list-style: none;
-  border-top: 1px solid var(--border-color-soft);
 }
 
 .login-page__feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface-card-bg);
+  backdrop-filter: blur(12px);
+}
+
+.login-page__feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: var(--primary-soft);
+  color: var(--accent-color);
+  font-size: 12px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.login-page__feature-item div {
   display: grid;
   gap: 2px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border-color-soft);
 }
 
 .login-page__feature-item strong {
   color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14.5px;
+  font-weight: 700;
 }
 
 .login-page__feature-item span {
   color: var(--text-secondary);
   font-size: 13px;
-  line-height: 1.7;
+  line-height: 1.6;
 }
 
-/* 登录表单：暖白软面板 */
+/* 登录表单：晶透毛玻璃卡片 */
 .login-page__form {
+  position: relative;
   display: grid;
   gap: 18px;
-  padding: clamp(24px, 4vw, 36px);
-  border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-lg);
-  background: var(--surface-color);
+  padding: clamp(26px, 4vw, 38px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card-bg);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-card);
+}
+
+.login-page__form-badge {
+  width: fit-content;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--accent-color);
 }
 
 .login-page__form-header {
@@ -238,19 +335,19 @@ async function handleLogin() {
   margin: 0;
   font-family: var(--font-display);
   font-size: 26px;
-  font-weight: 600;
+  font-weight: 800;
 }
 
 .login-page__form-subtitle {
   margin: 0;
   color: var(--text-secondary);
   font-size: 14px;
-  line-height: 1.8;
+  line-height: 1.7;
 }
 
 .login-page__form-fields {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .login-page__field {
@@ -260,13 +357,13 @@ async function handleLogin() {
 
 .login-page__label {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
 }
 
 .login-page__submit {
   width: 100%;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .login-page__footnote {
@@ -280,13 +377,23 @@ async function handleLogin() {
 @media (max-width: 860px) {
   .login-page {
     place-items: start center;
-    padding: 40px 20px;
+    padding: 36px 18px;
   }
 
   .login-page__panel {
     grid-template-columns: 1fr;
-    gap: 36px;
-    max-width: 460px;
+    gap: 32px;
+    max-width: 480px;
+  }
+
+  .login-page__portrait-ring {
+    width: 92px;
+    height: 92px;
+    border-radius: 28px;
+  }
+
+  .login-page__portrait {
+    border-radius: 24px;
   }
 }
 </style>

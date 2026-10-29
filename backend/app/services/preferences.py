@@ -25,8 +25,8 @@ DEFAULT_USER_PREFERENCES = {
         "paragraph_spacing": 1.0,
         "content_width": 72,
         "theme": "light",
-        # 二次元 UI 主题默认值：樱花粉、大圆角、霞鹜文楷
-        "theme_color": "#F4A4B4",
+        # 二次元 UI 主题默认值：初华星空紫、大圆角、霞鹜文楷
+        "theme_color": "#7C5CE6",
         "border_radius": "soft",
         "font_family": "lxgwwenkai",
     },
@@ -204,7 +204,10 @@ def _normalize_hex_color(value: Any, fallback: str) -> str:
     if len(trimmed) == 7 and trimmed.startswith("#"):
         try:
             int(trimmed[1:], 16)
-            return trimmed.lower()
+            lowered = trimmed.lower()
+            if lowered in {"#f4a4b4", "#9a6238"}:
+                return fallback.lower()
+            return lowered
         except ValueError:
             pass
     return fallback

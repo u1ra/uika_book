@@ -1,4 +1,6 @@
+from functools import lru_cache
 import logging
+import os
 import re
 import uuid
 from collections.abc import Sequence
@@ -88,7 +90,14 @@ def list_user_books(
     if group_id is not None:
         statement = statement.join(Book.groups).where(BookGroup.id == group_id, BookGroup.user_id == user_id)
     if search and search.strip():
-        statement = statement.where(or_(Book.title.contains(search.strip()), Book.file_name.contains(search.strip())))
+        keyword = search.strip()
+        statement = statement.where(
+            or_(
+                Book.title.contains(keyword),
+                Book.author.contains(keyword),
+                Book.file_name.contains(keyword),
+            )
+        )
 
     rows = db.execute(_apply_book_sort(statement, sort)).unique().all()
     return [_serialize_bookshelf_item(book, progress) for book, progress in rows]
@@ -205,12 +214,18 @@ def update_user_book_metadata(
     return get_user_book_detail(db, user_id, book_id)
 
 
+@lru_cache(maxsize=4)
+def _read_cached_book_text(file_path: str, mtime_ns: int, encoding: str) -> str:
+    # mtime_ns 作为缓存键的一部分，文件更新或重传后自动失效
+    _ = mtime_ns
+    with open(file_path, "r", encoding=encoding, newline="") as f:
+        return normalize_text_newlines(f.read())
+
+
 def read_book_text(book: Book) -> str:
     try:
-        # Read without implicit newline conversion, then apply the same canonical
-        # representation used when chapter offsets are created.
-        with open(book.file_path, "r", encoding=book.encoding, newline="") as f:
-            return normalize_text_newlines(f.read())
+        stat_result = os.stat(book.file_path)
+        return _read_cached_book_text(book.file_path, stat_result.st_mtime_ns, book.encoding)
     except FileNotFoundError as exc:
         raise BookReadError("Book file not found") from exc
     except UnicodeDecodeError as exc:
@@ -220,23 +235,12 @@ def read_book_text(book: Book) -> str:
 
 
 def read_book_chapter_content(book: Book, chapter: BookChapter) -> str:
-    try:
-        # newline=None exposes the canonical LF character stream to f.read(n),
-        # so offsets remain Python Unicode character positions rather than bytes.
-        with open(book.file_path, "r", encoding=book.encoding, newline=None) as f:
-            start_offset = max(0, chapter.start_offset)
-            if start_offset > 0:
-                skipped = f.read(start_offset)
-                if len(skipped) < start_offset:
-                    return ""
-            content_length = max(0, chapter.end_offset - start_offset)
-            return f.read(content_length)
-    except FileNotFoundError as exc:
-        raise BookReadError("Book file not found") from exc
-    except UnicodeDecodeError as exc:
-        raise BookReadError("Failed to decode book file with stored encoding") from exc
-    except OSError as exc:
-        raise BookReadError(f"Failed to read book file: {exc}") from exc
+    text = read_book_text(book)
+    start_offset = max(0, chapter.start_offset)
+    if start_offset >= len(text):
+        return ""
+    end_offset = max(start_offset, chapter.end_offset)
+    return text[start_offset:end_offset]
 
 
 def upload_user_book_cover(

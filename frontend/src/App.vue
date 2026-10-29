@@ -6,11 +6,14 @@
       <transition name="boot-fade">
         <div v-if="authStore.isRestoringSession" class="boot-screen" aria-live="polite">
           <div class="boot-screen__panel">
-            <img class="boot-screen__logo" src="/icon-192.png" alt="初华的书" />
-            <svg class="animate-spin h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
+            <div class="boot-screen__avatar-wrap">
+              <span class="boot-screen__orbit" aria-hidden="true" />
+              <img class="boot-screen__logo" src="/icon-192.png" alt="初华的书" />
+            </div>
+            <div class="boot-screen__badge">
+              <span aria-hidden="true">✦</span>
+              <span>UIKA LIBRARY</span>
+            </div>
             <div class="boot-screen__title">正在恢复登录状态</div>
             <p class="boot-screen__description">正在确认你的账号信息与阅读入口，请稍候。</p>
           </div>
@@ -64,39 +67,82 @@ watch(
   display: grid;
   place-items: center;
   padding: 24px;
-  background: color-mix(in srgb, var(--app-shell-color) 78%, white 22%);
-  backdrop-filter: blur(16px);
+  background: color-mix(in srgb, var(--app-shell-color) 82%, transparent 18%);
+  backdrop-filter: blur(18px);
 }
 
 .boot-screen__panel {
   width: min(420px, 100%);
   display: grid;
   justify-items: center;
-  gap: 18px;
-  padding: 36px 28px;
+  gap: 14px;
+  padding: 38px 28px;
   border: 1px solid var(--border-color);
   border-radius: 28px;
-  background: color-mix(in srgb, var(--surface-color) 90%, white 10%);
-  box-shadow: var(--surface-shadow);
+  background: var(--surface-card-bg);
+  box-shadow: var(--shadow-modal);
   text-align: center;
 }
 
+.boot-screen__avatar-wrap {
+  position: relative;
+  width: 78px;
+  height: 78px;
+  display: grid;
+  place-items: center;
+}
+
+.boot-screen__orbit {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px dashed var(--border-color);
+  border-top-color: var(--primary-color);
+  border-right-color: var(--accent-color);
+  animation: boot-orbit-spin 2.4s linear infinite;
+}
+
+@keyframes boot-orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .boot-screen__logo {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
   object-fit: cover;
+  border: 2px solid var(--border-gold);
+}
+
+.boot-screen__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-color);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.boot-screen__badge span:first-child {
+  color: var(--accent-color);
 }
 
 .boot-screen__title {
   font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
 }
 
 .boot-screen__description {
   margin: 0;
   color: var(--text-secondary);
+  font-size: 14px;
   line-height: 1.7;
 }
 

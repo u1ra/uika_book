@@ -55,7 +55,7 @@
           />
 
           <div class="detail-hero__body">
-            <div class="detail-hero__eyebrow">Book Detail</div>
+            <div class="detail-hero__eyebrow">✦ Book Detail</div>
             <h1 class="detail-hero__title">{{ book.title }}</h1>
             <p class="detail-hero__author">{{ book.author || "作者未填写" }}</p>
             <p class="detail-hero__description">
@@ -156,8 +156,8 @@
               </div>
 
               <div class="detail-file-path">
-                <span class="detail-file-path__label">本地文件</span>
-                <code>{{ book.file_path }}</code>
+                <span class="detail-file-path__label">平均篇幅</span>
+                <code>约 {{ formatNumber(Math.round(book.total_words / Math.max(1, book.total_chapters))) }} 字 / 章</code>
               </div>
             </div>
           </div>
@@ -740,35 +740,59 @@ watch(
   letter-spacing: 0.04em;
 }
 
-/* Hero: 纯排版，无卡片边框，左封面右信息 */
+/* Hero: 轻小说文库风毛玻璃展示横幅 */
 .detail-hero {
+  position: relative;
+  overflow: hidden;
   display: grid;
-  grid-template-columns: 140px minmax(0, 1fr);
+  grid-template-columns: 164px minmax(0, 1fr);
   gap: clamp(24px, 4vw, 40px);
   align-items: start;
+  padding: clamp(22px, 3.5vw, 34px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card-bg);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-card);
+}
+
+.detail-hero::before {
+  content: "";
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--primary-soft) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .detail-hero__cover {
-  width: 140px;
-  height: 190px;
-  border-radius: var(--radius-sm);
+  width: 164px;
+  height: 222px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 14px 32px rgba(96, 68, 198, 0.2);
 }
 
 .detail-hero__body {
   display: grid;
-  gap: 16px;
+  gap: 15px;
   align-content: start;
 }
 
 .detail-hero__eyebrow {
   display: inline-flex;
+  align-items: center;
+  gap: 6px;
   width: fit-content;
-  padding: 5px 12px;
-  border: 1px solid var(--border-color-soft);
+  padding: 4px 12px;
+  border: 1px solid var(--border-color);
   border-radius: 999px;
+  background: var(--primary-soft);
   color: var(--primary-color);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -776,25 +800,26 @@ watch(
 .detail-hero__title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(28px, 4vw, 40px);
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
+  font-size: clamp(26px, 3.8vw, 38px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.22;
   text-wrap: balance;
 }
 
 .detail-hero__author {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 15px;
+  font-size: 14.5px;
+  font-weight: 600;
 }
 
 .detail-hero__description {
   margin: 0;
-  max-width: 64ch;
+  max-width: 66ch;
   color: var(--text-secondary);
   font-size: 14px;
-  line-height: 1.9;
+  line-height: 1.85;
   white-space: pre-wrap;
 }
 
@@ -807,7 +832,7 @@ watch(
 .detail-hero__progress {
   display: grid;
   gap: 8px;
-  max-width: 420px;
+  max-width: 440px;
 }
 
 .detail-hero__progress-text {
@@ -816,6 +841,7 @@ watch(
   gap: 12px;
   color: var(--text-secondary);
   font-size: 12px;
+  font-weight: 600;
 }
 
 .detail-hero__actions {
@@ -832,11 +858,13 @@ watch(
   gap: 20px;
 }
 
-/* Card base: 1px 细边框 + 柔和圆角 + 卡片底色 */
+/* Card base: 毛玻璃二次元属性面板 */
 .detail-card {
   border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--surface-card-bg);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-soft);
   overflow: hidden;
 }
 
@@ -844,21 +872,32 @@ watch(
   grid-column: 1 / -1;
 }
 
-/* Card header: block-level container with full-width border */
+/* Card header */
 .detail-card__header {
-  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 15px 22px;
   border-bottom: 1px solid var(--border-color-soft);
+  background: var(--surface-panel-soft-bg);
+}
+
+.detail-card__header::before {
+  content: "✦";
+  color: var(--accent-color);
+  font-size: 12px;
 }
 
 .detail-card__heading {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
 }
 
 /* Card body */
 .detail-card__body {
-  padding: 18px 20px;
+  padding: 20px 22px;
 }
 
 /* Info grid inside cards */

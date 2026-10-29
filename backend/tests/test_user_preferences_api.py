@@ -57,7 +57,7 @@ def test_get_preferences_returns_defaults_when_user_has_no_saved_preferences(mon
             "content_width": 72,
             "theme": "light",
             # 二次元 UI 主题扩展字段默认值
-            "theme_color": "#F4A4B4",
+            "theme_color": "#7C5CE6",
             "border_radius": "soft",
             "font_family": "lxgwwenkai",
         },
@@ -106,7 +106,7 @@ def test_patch_preferences_persists_bookshelf_and_reader_settings(monkeypatch, t
         "content_width": 76,
         "theme": "dark",
         # 未显式传入的新字段应自动填充默认值（主题色统一归一化为小写）
-        "theme_color": "#f4a4b4",
+        "theme_color": "#7c5ce6",
         "border_radius": "soft",
         "font_family": "lxgwwenkai",
     }
@@ -156,7 +156,7 @@ def test_get_preferences_normalizes_invalid_legacy_payload(monkeypatch, tmp_path
             "content_width": 72,
             "theme": "light",
             # 非法旧数据被归一化后，新字段填充默认值
-            "theme_color": "#F4A4B4",
+            "theme_color": "#7C5CE6",
             "border_radius": "soft",
             "font_family": "lxgwwenkai",
         },

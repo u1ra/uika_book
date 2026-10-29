@@ -25,7 +25,7 @@
         </div>
       </section>
 
-      <div v-if="groups.length === 0" class="flex flex-col items-center justify-center py-8 text-gray-500">
+      <div v-if="groups.length === 0" class="flex flex-col items-center justify-center py-8 text-[var(--text-secondary)]">
         <p>还没有真实分组</p>
         <p class="text-sm">可以先创建一个。</p>
       </div>
@@ -172,8 +172,9 @@ async function confirmDelete(groupId: number, groupName: string) {
   gap: 14px;
   margin-bottom: 20px;
   padding: 16px 18px;
+  border: 1px solid var(--border-color-soft);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--surface-panel-soft-bg);
 }
 
 .group-manager__create p {

@@ -5,24 +5,34 @@
       class="app-layout__header"
     >
       <div class="app-layout__brand" @click="goTo('books')">
-        <img class="app-layout__logo" src="/icon-192.png" alt="初华的书" />
-        <div class="app-layout__title">初华的书</div>
+        <div class="app-layout__logo-ring">
+          <img class="app-layout__logo" src="/icon-192.png" alt="初华的书" />
+        </div>
+        <div class="app-layout__brand-text">
+          <div class="app-layout__title">
+            <span>初华的书</span>
+            <span class="app-layout__star" aria-hidden="true">✦</span>
+          </div>
+          <span class="app-layout__subtitle">Uika Light Reader</span>
+        </div>
       </div>
 
       <nav class="app-layout__nav" aria-label="主导航">
         <button
           class="app-layout__nav-link"
-          :class="{ 'app-layout__nav-link--active': route.name === 'books' }"
+          :class="{ 'app-layout__nav-link--active': route.name === 'books' || route.name === 'book-detail' }"
           @click="goTo('books')"
         >
-          书架
+          <span v-if="route.name === 'books' || route.name === 'book-detail'" class="app-layout__nav-sparkle" aria-hidden="true">✦</span>
+          <span>书架</span>
         </button>
         <button
           class="app-layout__nav-link"
           :class="{ 'app-layout__nav-link--active': route.name === 'rules' }"
           @click="goTo('rules')"
         >
-          目录规则
+          <span v-if="route.name === 'rules'" class="app-layout__nav-sparkle" aria-hidden="true">✦</span>
+          <span>目录规则</span>
         </button>
       </nav>
 
@@ -38,41 +48,42 @@
         </button>
 
         <div ref="userMenuRef" class="app-layout__user">
-        <div class="app-layout__user-trigger" @click="userMenuOpen = !userMenuOpen">
-          <div class="app-layout__user-meta">
-            <span class="app-layout__username">{{ authStore.user?.username }}</span>
+          <div class="app-layout__user-trigger" @click="userMenuOpen = !userMenuOpen">
+            <img class="app-layout__user-avatar" src="/icon-192.png" alt="" aria-hidden="true" />
+            <div class="app-layout__user-meta">
+              <span class="app-layout__username">{{ authStore.user?.username }}</span>
+            </div>
+            <svg
+              class="app-layout__user-chevron"
+              :class="{ 'app-layout__user-chevron--open': userMenuOpen }"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
           </div>
-          <svg
-            class="app-layout__user-chevron"
-            :class="{ 'app-layout__user-chevron--open': userMenuOpen }"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </div>
 
-        <div v-show="userMenuOpen" class="app-layout__user-menu">
-          <button
-            class="app-layout__user-menu-item"
-            @click="passwordModalVisible = true; userMenuOpen = false"
-          >
-            更改密码
-          </button>
-          <button
-            class="app-layout__user-menu-item app-layout__user-menu-item--danger"
-            @click="handleLogout"
-          >
-            退出登录
-          </button>
+          <div v-show="userMenuOpen" class="app-layout__user-menu">
+            <button
+              class="app-layout__user-menu-item"
+              @click="passwordModalVisible = true; userMenuOpen = false"
+            >
+              更改密码
+            </button>
+            <button
+              class="app-layout__user-menu-item app-layout__user-menu-item--danger"
+              @click="handleLogout"
+            >
+              退出登录
+            </button>
+          </div>
         </div>
-      </div>
       </div>
     </header>
 
@@ -223,109 +234,139 @@ async function handleChangePassword() {
 .app-layout__header {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   display: flex;
   justify-content: space-between;
   gap: 20px;
   align-items: center;
   padding: 12px 28px;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(18px);
   background: var(--surface-header-bg);
   border-bottom: 1px solid var(--border-color-soft);
+  box-shadow: 0 4px 24px -6px rgba(96, 68, 198, 0.08);
 }
 
 .app-layout__brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
   user-select: none;
 }
 
+.app-layout__logo-ring {
+  padding: 2px;
+  border-radius: 13px;
+  background: var(--brand-gradient);
+  box-shadow: 0 4px 12px var(--primary-soft);
+}
+
 .app-layout__logo {
+  display: block;
   width: 34px;
   height: 34px;
-  border-radius: 10px;
+  border-radius: 11px;
   object-fit: cover;
 }
 
+.app-layout__brand-text {
+  display: grid;
+  gap: 1px;
+}
+
 .app-layout__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-family: var(--font-display);
   font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.app-layout__star {
+  color: var(--accent-color);
+  font-size: 13px;
+}
+
+.app-layout__subtitle {
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
 }
 
 .app-layout__nav {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: 999px;
+  background: var(--surface-panel-soft-bg);
   min-width: 0;
 }
 
 .app-layout__nav-link {
   position: relative;
-  padding: 8px 12px;
-  border: none;
-  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13.5px;
+  font-weight: 600;
   cursor: pointer;
-  transition:
-    color 160ms ease,
-    background 160ms ease;
+  transition: all 180ms ease;
 }
 
 .app-layout__nav-link:hover {
   color: var(--text-primary);
-  background: var(--surface-panel-soft-bg);
 }
 
 .app-layout__nav-link--active {
   color: var(--primary-color);
-  font-weight: 600;
+  background: var(--surface-tab-active-bg);
+  border-color: var(--surface-tab-active-border);
+  box-shadow: 0 4px 12px var(--primary-soft);
+  font-weight: 700;
 }
 
-.app-layout__nav-link--active::after {
-  content: "";
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 2px;
-  height: 2px;
-  border-radius: 999px;
-  background: var(--primary-color);
+.app-layout__nav-sparkle {
+  color: var(--accent-color);
+  font-size: 11px;
 }
 
 .app-layout__side {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .app-layout__theme-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-sm);
-  background: transparent;
+  border-radius: 999px;
+  background: var(--surface-card-bg);
   color: var(--text-secondary);
   cursor: pointer;
-  transition:
-    color 160ms ease,
-    background 160ms ease,
-    border-color 160ms ease;
+  transition: all 180ms ease;
 }
 
 .app-layout__theme-toggle:hover {
   color: var(--primary-color);
   background: var(--surface-panel-soft-bg);
   border-color: var(--border-color);
+  transform: translateY(-1px);
 }
 
 .app-layout__user {
@@ -338,14 +379,25 @@ async function handleChangePassword() {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
+  padding: 5px 11px 5px 6px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: 999px;
+  background: var(--surface-card-bg);
   cursor: pointer;
-  transition: background 160ms ease;
+  transition: all 180ms ease;
 }
 
 .app-layout__user-trigger:hover {
+  border-color: var(--border-color);
   background: var(--surface-panel-soft-bg);
+}
+
+.app-layout__user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-gold);
 }
 
 .app-layout__user-meta {
@@ -365,14 +417,15 @@ async function handleChangePassword() {
 
 .app-layout__user-menu {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   right: 0;
-  z-index: 20;
-  min-width: 140px;
+  z-index: 30;
+  min-width: 150px;
   padding: 6px;
   border-radius: var(--radius-md);
-  background: var(--surface-color);
-  border: 1px solid var(--border-color-soft);
+  background: var(--dialog-bg);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border-color);
   box-shadow: var(--shadow-modal);
   display: grid;
   gap: 2px;
@@ -380,15 +433,16 @@ async function handleChangePassword() {
 
 .app-layout__user-menu-item {
   width: 100%;
-  padding: 8px 12px;
+  padding: 9px 12px;
   border-radius: var(--radius-sm);
   text-align: left;
-  font-size: 14px;
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--text-primary);
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: background 120ms ease;
+  transition: background 140ms ease;
 }
 
 .app-layout__user-menu-item:hover {
@@ -396,26 +450,31 @@ async function handleChangePassword() {
 }
 
 .app-layout__user-menu-item--danger {
-  color: #ef4444;
+  color: #f43f5e;
 }
 
 .app-layout__user-menu-item--danger:hover {
-  background: rgba(239, 68, 68, 0.08);
+  background: rgba(244, 63, 94, 0.1);
 }
 
 .app-layout__content {
+  max-width: 1360px;
+  margin: 0 auto;
   padding: 28px;
 }
 
 .app-layout__content--immersive {
+  max-width: none;
+  margin: 0;
   padding: 0;
 }
 
 .app-layout__username {
-  max-width: min(240px, 40vw);
+  max-width: min(220px, 38vw);
   overflow: hidden;
-  color: var(--text-secondary);
-  font-size: 14px;
+  color: var(--text-primary);
+  font-size: 13.5px;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -427,7 +486,7 @@ async function handleChangePassword() {
 .password-modal__title {
   font-family: var(--font-display);
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 800;
   margin-bottom: 20px;
 }
 
@@ -459,7 +518,7 @@ async function handleChangePassword() {
     display: grid;
     grid-template-columns: 1fr auto;
     grid-template-areas: "brand user" "nav nav";
-    gap: 6px 16px;
+    gap: 10px 16px;
     align-items: center;
     padding: 10px 16px;
   }
@@ -470,8 +529,13 @@ async function handleChangePassword() {
 
   .app-layout__nav {
     grid-area: nav;
-    flex-wrap: wrap;
+    justify-content: center;
     width: 100%;
+  }
+
+  .app-layout__nav-link {
+    flex: 1;
+    justify-content: center;
   }
 
   .app-layout__side {
@@ -481,14 +545,8 @@ async function handleChangePassword() {
     width: auto;
   }
 
-  .app-layout__user-meta {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
   .app-layout__username {
-    max-width: 120px;
+    max-width: 110px;
     font-size: 13px;
   }
 

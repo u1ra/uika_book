@@ -1,7 +1,7 @@
 <template>
   <input
     :class="cn(
-      'flex h-9 w-full rounded-md border border-[var(--dialog-border)] bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary-color)] disabled:cursor-not-allowed disabled:opacity-50',
+      'flex h-10 w-full rounded-xl border border-[var(--dialog-border)] bg-[var(--surface-input-bg)] px-3.5 py-1.5 text-sm transition-all file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:border-[var(--primary-color)] focus-visible:ring-2 focus-visible:ring-[var(--primary-soft)] disabled:cursor-not-allowed disabled:opacity-50',
       $attrs.class ?? ''
     )"
     v-model="modelValue"

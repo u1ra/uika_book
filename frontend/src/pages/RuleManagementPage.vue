@@ -1099,46 +1099,67 @@ onMounted(() => {
 /* 统计行：轻量 stat 块 */
 .rule-page__stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--space-3);
 }
 
 .rule-page__stat {
-  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+  padding: 16px 18px;
   border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--surface-stat-bg);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-soft);
+}
+
+.rule-page__stat::after {
+  content: "✦";
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  color: var(--accent-color);
+  font-size: 14px;
+  opacity: 0.65;
 }
 
 .rule-page__stat-label {
   display: block;
   color: var(--text-secondary);
-  font-size: var(--text-caption);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .rule-page__stat-value {
   display: block;
   margin-top: 6px;
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 24px;
+  font-weight: 800;
   line-height: 1.2;
+  color: var(--primary-color);
   overflow-wrap: anywhere;
 }
 
 .rule-page__stat-value--text {
   font-size: 16px;
   line-height: 1.5;
+  color: var(--text-primary);
 }
 
 .rule-page__alert {
   border-radius: var(--radius-md);
 }
 
-/* 分区卡片：1px 细边框 + 柔和圆角 + 卡片底色 */
+/* 分区卡片：毛玻璃二次元面板 */
 .rule-page__card {
   border: 1px solid var(--border-color-soft);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--surface-card-bg);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-soft);
   overflow: hidden;
 }
 
@@ -1148,14 +1169,24 @@ onMounted(() => {
   justify-content: space-between;
   align-items: baseline;
   gap: 6px 16px;
-  padding: 14px 20px;
+  padding: 15px 22px;
   border-bottom: 1px solid var(--border-color-soft);
+  background: var(--surface-panel-soft-bg);
 }
 
 .rule-page__card-title {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.rule-page__card-title::before {
+  content: "✦";
+  color: var(--accent-color);
+  font-size: 12px;
 }
 
 .rule-page__card-subtitle {
@@ -1164,7 +1195,7 @@ onMounted(() => {
 }
 
 .rule-page__card-body {
-  padding: 18px 20px;
+  padding: 20px 22px;
 }
 
 /* 规则列表：统一卡片式列表，桌面移动共用一份模板 */
@@ -1176,9 +1207,16 @@ onMounted(() => {
 .rule-item {
   display: grid;
   gap: 12px;
-  padding: 16px 18px;
+  padding: 18px 20px;
   border: 1px solid var(--border-color-soft);
   border-radius: var(--radius-md);
+  background: var(--surface-panel-bg);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.rule-item:hover {
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-soft);
 }
 
 .rule-item__head {

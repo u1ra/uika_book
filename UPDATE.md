@@ -2,6 +2,33 @@
 
 本文记录面向使用者的主要变化。历史版本中的运行地址和构建产物哈希不再保留；当前部署方式以 [README.md](./README.md) 和仓库配置为准。
 
+## v1.17 — 2026-10-29
+
+本版将全站前端重构为「初华（Uika）星空印象色」二次元轻小说文库风格，并同步完成前后端主题色对齐、书架作者搜索、章节读取 LRU 缓存与 Nginx/PWA 缓存策略优化。后端 API 路由、数据库表结构与 `chapter_index + char_offset` 阅读进度语义保持不变。
+
+### 二次元（初华星空印象色）UI 重构
+
+- **色彩体系升级**：以星空薰衣草紫（浅色 `#7C5CE6` / 深色 `#A78BFA`）为主色、璀璨香槟星光金（浅色 `#D49B35` / 深色 `#F0C265`）为点缀色，全面替换 `styles/index.css`、`tailwind.config.js`、`index.html`、`vite.config.ts` 与 `stores/app-theme.ts` 中的主题变量及 PWA 状态栏色。
+- **UI 与阅读正文字体双轨分离**：在 `stores/preferences.ts` 中拆分 `--font-sans`（UI 现代几何圆体）与 `--reader-font-family`（阅读正文独立使用霞鹜文楷或系统字体），修改阅读器字体不再污染全站按钮、导航与弹窗排版。
+- **书架「海报网格 + 详细列表」双视图**：新增视图模式切换器（默认 3:4 轻小说海报网格视图，状态持久化至 `localStorage`），配合毛玻璃分组胶囊 Tab、星芒徽章与立体书脊光影封面组件 `BookCover.vue`。
+- **登录页、详情页、规则页与全局壳层翻新**：登录页升级为动态星光极光背景 + 轻小说文库概念卡片；顶栏改为悬浮胶囊毛玻璃导航；详情页升级为毛玻璃 Hero 横幅并将底部暴露的服务端容器路径替换为“平均每章字数”；规则页升级为星光正则工坊卡片。
+- **阅读页毛玻璃浮动工具区 + 护眼纸张**：顶部状态条、桌面左右浮动工具岛、底部移动端动作栏及目录/设置抽屉全部升级为二次元毛玻璃胶囊质感，阅读纸张采用护眼微紫羊皮纸（浅色 `#F5F3FA`/`#FCFBF9`）与深邃星夜底（深色 `#0D0B14`/`#151221`），滚动模型、虚拟目录高度与进度同步几何零改动。
+
+### 前后端体验与性能优化
+
+- **前后端默认主题色对齐与旧数据自动迁移**：后端 `schemas/preferences.py` 与 `services/preferences.py` 默认 `theme_color` 统一为 `#7C5CE6`，前后端归一化逻辑自动将历史默认色（`#9a6238`、`#f4a4b4`）平滑迁移为 `#7c5ce6`。
+- **书架支持按作者名搜索**：`list_user_books` 关键词匹配扩展为同时检索 `Book.title`、`Book.author` 与 `Book.file_name`。
+- **章节读取 LRU 缓存加速**：`services/books.py` 新增基于 `(file_path, st_mtime_ns, encoding)` 的 `@lru_cache(maxsize=4)` 文本缓存，同一本书连续翻章直接内存切片，避免每次翻页重复读取与解码整本 TXT；`save_book_chapters` 改为 `db.add_all` 批量入库。
+- **PWA / Nginx 缓存策略根治**：`frontend/nginx.conf` 对 `index.html`、`sw.js`、`registerSW.js`、`manifest.webmanifest`、`workbox-*.js` 强制设置 `Cache-Control: no-store, no-cache, must-revalidate`，并为 `/api/` 设置 300s 代理超时；Workbox 启用 `cleanupOutdatedCaches`、`clientsClaim` 与 `skipWaiting`。
+- **工程清理**：`frontend/tsconfig.node.json` 补齐 `"noEmit": true`，清理历史遗留的 `vite.config.js`、`vite.config.d.ts` 及空目录。
+
+### 测试与验证
+
+- 后端 `pytest -q`：`108 passed`。
+- 前端 `npm run typecheck`、`npm run test`（6 个测试文件 36 项单测）、`npm run build`：全部通过。
+- 前端静态回归脚本 `verify-ui-fixes.mjs` 与 `verify-reader-page-layout.mjs`：全部通过。
+- `docker compose up -d --build`：前后端镜像构建并启动成功，`/health` 与 `sw.js` `no-cache` 响应头验证通过。
+
 ## v1.16 — 2026-08-13
 
 本版修复 Windows 风格 TXT 首次导入后章节正文边界逐渐错位的问题。后端 API、数据库结构、章节规则格式以及 `chapter_index + char_offset` 阅读进度语义均未改变。

@@ -300,17 +300,23 @@ function formatChapterOrdinal(index: number) {
     "index meta"
     "title title";
   column-gap: 12px;
-  row-gap: 2px;
-  padding: 10px 12px;
+  row-gap: 3px;
+  padding: 11px 14px;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
   text-align: left;
   cursor: pointer;
-  transition: background 160ms ease;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
 }
 
 .chapter-catalog-list__item:hover {
   background: var(--surface-panel-soft-bg);
+  border-color: var(--border-color-soft);
+  transform: translateX(2px);
 }
 
 .chapter-catalog-list__item:focus-visible {

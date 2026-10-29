@@ -78,7 +78,7 @@ function applyThemeToDocument(theme: AppThemeMode) {
   if (themeColorMeta) {
     themeColorMeta.setAttribute(
       "content",
-      theme === "dark" ? "#14120F" : "#F7F4ED",
+      theme === "dark" ? "#0D0B14" : "#F8F6FF",
     );
   }
 }

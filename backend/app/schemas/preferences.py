@@ -28,7 +28,7 @@ class ReaderPreferences(ORMModel):
     content_width: int = Field(default=72, ge=56, le=96)
     theme: ReaderThemePreference = "light"
     # 二次元 UI 主题扩展字段：支持用户自定义主题色、圆角风格与阅读字体
-    theme_color: str = Field(default="#F4A4B4", pattern=r"^#[0-9A-Fa-f]{6}$")
+    theme_color: str = Field(default="#7C5CE6", pattern=r"^#[0-9A-Fa-f]{6}$")
     border_radius: UI_BORDER_RADIUS_PREFERENCE = "soft"
     font_family: UI_FONT_FAMILY_PREFERENCE = "lxgwwenkai"
 

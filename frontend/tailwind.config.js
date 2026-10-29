@@ -10,18 +10,31 @@ export default {
     extend: {
       fontFamily: {
         sans: [
-          '"LXGW WenKai"',
+          '"Plus Jakarta Sans"',
+          '"Nunito"',
+          '"HarmonyOS Sans SC"',
+          '"MiSans"',
           '"PingFang SC"',
           '"Hiragino Sans GB"',
           '"Microsoft YaHei"',
           'sans-serif',
         ],
         display: [
+          '"Plus Jakarta Sans"',
+          '"Nunito"',
+          '"HarmonyOS Sans SC"',
+          '"MiSans"',
+          '"PingFang SC"',
+          '"Hiragino Sans GB"',
+          '"Microsoft YaHei"',
+          'sans-serif',
+        ],
+        reader: [
           '"LXGW WenKai"',
-          '"Palatino Linotype"',
-          '"Times New Roman"',
-          '"STSong"',
-          'serif',
+          '"PingFang SC"',
+          '"Hiragino Sans GB"',
+          '"Microsoft YaHei"',
+          'sans-serif',
         ],
       },
       // 与 styles/index.css 的 --radius-* 保持一致
@@ -33,14 +46,14 @@ export default {
       },
       colors: {
         primary: {
-          DEFAULT: 'var(--primary-color, #9A6238)',
-          soft: 'var(--primary-soft, rgba(154, 98, 56, 0.14))',
+          DEFAULT: 'var(--primary-color, #7C5CE6)',
+          soft: 'var(--primary-soft, rgba(124, 92, 230, 0.13))',
         },
         accent: {
-          DEFAULT: 'var(--accent-color, #6E8577)',
+          DEFAULT: 'var(--accent-color, #D49B35)',
         },
         surface: {
-          DEFAULT: 'var(--surface-color, #FDFBF6)',
+          DEFAULT: 'var(--surface-color, #FFFFFF)',
           raised: 'var(--surface-raised)',
           soft: 'var(--surface-soft)',
           panel: 'var(--surface-panel-bg)',
@@ -48,7 +61,7 @@ export default {
           input: 'var(--surface-input-bg)',
         },
         muted: {
-          DEFAULT: 'var(--text-secondary, #6F675B)',
+          DEFAULT: 'var(--text-secondary, #6E6687)',
         },
       },
     },
