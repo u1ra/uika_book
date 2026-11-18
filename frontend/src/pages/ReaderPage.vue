@@ -179,10 +179,10 @@
         </section>
       </main>
 
-      <aside class="reader-float">
+      <aside class="reader-float" :class="{ 'reader-float--active': shouldShowChrome }">
         <div class="reader-glass reader-float__panel" @click.stop>
           <div class="reader-float__stat">
-            <span>已读进度</span>
+            <span>{{ isCompactViewport ? currentChapterPositionLabel : "已读进度" }}</span>
             <strong>{{ progressPercentLabel }}</strong>
           </div>
 
@@ -1805,10 +1805,10 @@ function handleVisibilityChange() {
   });
 }
 
-function handleChapterSelect(chapterIndex: number) {
+function handleChapterSelect(chapterIndex: number, keepChrome = false) {
   activeDrawer.value = null;
 
-  if (isCompactViewport.value) {
+  if (isCompactViewport.value && !keepChrome) {
     mobileChromeVisible.value = false;
   }
 
@@ -1825,7 +1825,7 @@ function handlePrevChapter() {
     return;
   }
 
-  handleChapterSelect(currentChapterIndex.value - 1);
+  handleChapterSelect(currentChapterIndex.value - 1, mobileChromeVisible.value);
 }
 
 function handleNextChapter() {
@@ -1833,7 +1833,7 @@ function handleNextChapter() {
     return;
   }
 
-  handleChapterSelect(currentChapterIndex.value + 1);
+  handleChapterSelect(currentChapterIndex.value + 1, mobileChromeVisible.value);
 }
 
 function saveSnapshotBeforeNavigate(reason: string) {
@@ -2527,7 +2527,53 @@ function goToBookshelf() {
   }
 
   .reader-float {
-    display: none;
+    position: fixed;
+    top: auto;
+    left: 14px;
+    right: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    z-index: 30;
+    width: auto;
+    max-width: 460px;
+    margin: 0 auto;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(12px);
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease;
+  }
+
+  .reader-float--active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .reader-float__panel {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .reader-float__stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .reader-float__stat strong {
+    font-size: 16px;
+  }
+
+  .reader-float__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .reader-float__actions :deep(button) {
+    min-height: 38px;
+    font-size: 13px;
   }
 
   .reader-rail {
